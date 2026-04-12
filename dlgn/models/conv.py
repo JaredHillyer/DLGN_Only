@@ -19,31 +19,8 @@ import jax.numpy as jnp
 from jax import lax
 
 from dlgn.models.initialization import init_gate_layer
-from dlgn.models.gates import bin_op_all_combinations
-
-
-# ---------------------------------------------------------------------------
-# Gate forward (softmax / one-hot decode applied to all 16 binary ops)
-# ---------------------------------------------------------------------------
-
-def run_gate_layer(a, b, logits, training):
-    """Apply learned gates between paired inputs a, b.
-
-    Args:
-        a, b: (..., n_gates)
-        logits: (n_gates, 16)
-        training: bool — soft (softmax) vs hard (argmax one-hot)
-    Returns:
-        (..., n_gates)
-    """
-    combos = bin_op_all_combinations(a, b)       # (..., n_gates, 16)
-    weights = jax.lax.cond(
-        training,
-        lambda w: jax.nn.softmax(w, axis=-1),
-        lambda w: jax.nn.one_hot(jnp.argmax(w, axis=-1), 16),
-        logits,
-    )
-    return jnp.sum(combos * weights, axis=-1)
+from dlgn.models.network import run_layer
+from dlgn.types import LogicFamily
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +66,11 @@ def _init_tree_kernels(key, input_dim, n_kernels, depth, connection_type, logic_
     return all_logits, all_wires
 
 
-def _run_tree_kernels(params, wires, flat, training):
+def _run_tree_kernels(
+    params, wires, flat, training, key,
+    architecture='softmax', gumb_tau=1.0,
+    dirichlet_concentration=1.0, logic_family='full',
+):
     """Run all kernel trees on flat input vectors.
 
     Args:
@@ -97,18 +78,31 @@ def _run_tree_kernels(params, wires, flat, training):
         wires:  wires[k][layer_i]  — (wa, wb) index pairs
         flat:   (N, input_dim) — batch of flat vectors
         training: bool
+        key: PRNG key for stochastic decoders.
+        architecture: decoder architecture string.
+        gumb_tau: Gumbel-softmax temperature.
+        dirichlet_concentration: Dirichlet concentration.
+        logic_family: 'full' or 'light'.
     Returns:
         (N, n_kernels)
     """
     n_kernels = len(params)
     depth = len(params[0])
 
+    # one key per kernel × layer
+    all_keys = jax.random.split(key, n_kernels * depth)
+
     def apply_tree(patch_flat, k):
         z = patch_flat
         for layer_i in range(depth):
-            wa, wb = wires[k][layer_i]
-            g = params[k][layer_i]
-            z = run_gate_layer(z[wa], z[wb], g, training)
+            layer_key = all_keys[k * depth + layer_i]
+            z = run_layer(
+                params[k][layer_i],
+                wires[k][layer_i],
+                z, training, layer_key,
+                architecture, gumb_tau,
+                dirichlet_concentration, logic_family,
+            )
         return z.squeeze(-1)
 
     def apply_all_kernels(patch_flat):
@@ -152,7 +146,11 @@ def init_perceive_layer(
                               connection_type, logic_family)
 
 
-def run_perceive(params, wires, x, training):
+def run_perceive(
+    params, wires, x, training, key,
+    architecture='softmax', gumb_tau=1.0,
+    dirichlet_concentration=1.0, logic_family='full',
+):
     """Apply perception kernels to patch(es).
 
     Replaces the DLCA-style perceive that transposes, duplicates across
@@ -167,6 +165,11 @@ def run_perceive(params, wires, x, training):
             (batch, patch_size, channels)  — batch of patches
             (batch, patch_dim)             — already flattened
         training: bool — soft vs hard gate decoding.
+        key: PRNG key for stochastic decoders.
+        architecture: decoder architecture string.
+        gumb_tau: Gumbel-softmax temperature.
+        dirichlet_concentration: Dirichlet concentration.
+        logic_family: 'full' or 'light'.
 
     Returns:
         (n_kernels,) for single patch, or (batch, n_kernels) for batch.
@@ -184,7 +187,10 @@ def run_perceive(params, wires, x, training):
         # (batch, patch_dim) — already flat
         flat = x
 
-    out = _run_tree_kernels(params, wires, flat, training)
+    out = _run_tree_kernels(
+        params, wires, flat, training, key,
+        architecture, gumb_tau, dirichlet_concentration, logic_family,
+    )
 
     if squeezed:
         return out.squeeze(0)   # (n_kernels,)
@@ -218,7 +224,12 @@ def init_conv_gate_layer(
                               connection_type, logic_family)
 
 
-def run_conv_gate_layer(params, wires, x, training, kernel_size=(3, 3), stride=(1, 1)):
+def run_conv_gate_layer(
+    params, wires, x, training, key,
+    kernel_size=(3, 3), stride=(1, 1),
+    architecture='softmax', gumb_tau=1.0,
+    dirichlet_concentration=1.0, logic_family='full',
+):
     """Run a convolutional DLGN layer.
 
     Extracts patches from the image, runs kernel trees at every
@@ -228,8 +239,13 @@ def run_conv_gate_layer(params, wires, x, training, kernel_size=(3, 3), stride=(
         params, wires: from init_conv_gate_layer.
         x: (B, H, W, C), values in [0, 1].
         training: bool.
+        key: PRNG key for stochastic decoders.
         kernel_size: (kh, kw) — must match init.
         stride: (sh, sw).
+        architecture: decoder architecture string.
+        gumb_tau: Gumbel-softmax temperature.
+        dirichlet_concentration: Dirichlet concentration.
+        logic_family: 'full' or 'light'.
 
     Returns:
         (B, out_h, out_w, out_channels)
@@ -250,7 +266,10 @@ def run_conv_gate_layer(params, wires, x, training, kernel_size=(3, 3), stride=(
     )  # (B, out_h, out_w, patch_dim)
 
     flat = patches.reshape(B * out_h * out_w, patch_dim)
-    out = _run_tree_kernels(params, wires, flat, training)
+    out = _run_tree_kernels(
+        params, wires, flat, training, key,
+        architecture, gumb_tau, dirichlet_concentration, logic_family,
+    )
     return out.reshape(B, out_h, out_w, out_channels)
 
 
@@ -289,42 +308,61 @@ def or_pool(x, kernel_size=(2, 2), stride=None):
 if __name__ == '__main__':
     key = jax.random.PRNGKey(0)
 
-    # --- Perceive layer (patch input, like DLCA) ---
-    # key, k1 = jax.random.split(key)
-    patch = jax.random.uniform(key, (4, 9, 3))  # batch=4, 9 neighbors, 3 channels
+    # --- Perceive layer (full family) ---
+    key, k1, rk1 = jax.random.split(key, 3)
+    patch = jax.random.uniform(k1, (4, 9, 3))  # batch=4, 9 neighbors, 3 channels
 
-    # key, k2 = jax.random.split(key)
+    key, k2 = jax.random.split(key)
     p_params, p_wires = init_perceive_layer(
-        key, patch_dim=9 * 3, n_kernels=8, depth=2,
+        k2, patch_dim=9 * 3, n_kernels=8, depth=2, logic_family='full',
     )
-    feats = run_perceive(p_params, p_wires, patch, training=True)
-    print(f'Perceive  input {patch.shape} -> output {feats.shape}')
-    # expect (4, 8)
+    feats = run_perceive(p_params, p_wires, patch, training=True, key=rk1)
+    print(f'Perceive (full)   input {patch.shape} -> output {feats.shape}')
 
-    # --- Conv layer (image input) ---
-    x = jax.random.uniform(key, (2, 8, 8, 3))
+    # --- Perceive layer (light family) ---
+    key, k3, rk2 = jax.random.split(key, 3)
+    p_params_l, p_wires_l = init_perceive_layer(
+        k3, patch_dim=9 * 3, n_kernels=8, depth=2, logic_family='light',
+    )
+    feats_l = run_perceive(p_params_l, p_wires_l, patch, training=True, key=rk2,
+                           architecture='light_sigmoid', logic_family='light')
+    print(f'Perceive (light)  input {patch.shape} -> output {feats_l.shape}')
 
-    # key, k3 = jax.random.split(key)
+    # --- Conv layer (full family) ---
+    key, k4, rk3 = jax.random.split(key, 3)
+    x = jax.random.uniform(k4, (2, 8, 8, 3))
+
+    key, k5 = jax.random.split(key)
     c_params, c_wires = init_conv_gate_layer(
-        key, in_channels=3, out_channels=4,
-        kernel_size=(3, 3), depth=2,
+        k5, in_channels=3, out_channels=4,
+        kernel_size=(3, 3), depth=2, logic_family='full',
     )
-    y = run_conv_gate_layer(c_params, c_wires, x, training=True,
+    y = run_conv_gate_layer(c_params, c_wires, x, training=True, key=rk3,
                             kernel_size=(3, 3), stride=(1, 1))
-    print(f'ConvDLGN  input {x.shape} -> output {y.shape}')
-    # expect (2, 6, 6, 4)
+    print(f'ConvDLGN (full)   input {x.shape} -> output {y.shape}')
+
+    # --- Conv layer (light family) ---
+    key, k6, rk4 = jax.random.split(key, 3)
+    c_params_l, c_wires_l = init_conv_gate_layer(
+        k6, in_channels=3, out_channels=4,
+        kernel_size=(3, 3), depth=2, logic_family='light',
+    )
+    y_l = run_conv_gate_layer(c_params_l, c_wires_l, x, training=True, key=rk4,
+                              kernel_size=(3, 3), stride=(1, 1),
+                              architecture='light_sigmoid', logic_family='light')
+    print(f'ConvDLGN (light)  input {x.shape} -> output {y_l.shape}')
 
     # --- Or-pool ---
     y2 = or_pool(y, kernel_size=(2, 2))
-    print(f'OrPool    input {y.shape} -> output {y2.shape}')
-    # expect (2, 3, 3, 4)
+    print(f'OrPool            input {y.shape} -> output {y2.shape}')
 
     # --- Verify conv and perceive agree on the same patch ---
-    one_patch = x[0, 0:3, 0:3, :]          # (3, 3, 3) from image
-    one_patch_flat = one_patch.reshape(1, -1)  # (1, 27)
+    key, rk5 = jax.random.split(key)
+    one_patch_flat = x[0, 0:3, 0:3, :].reshape(1, -1)  # (1, 27)
 
     conv_at_00 = y[0, 0, 0, :]
-    perceive_at_00 = run_perceive(c_params, c_wires, one_patch_flat, training=True)
+    perceive_at_00 = run_perceive(c_params, c_wires, one_patch_flat,
+                                  training=True, key=rk3)
 
     match = jnp.allclose(conv_at_00, perceive_at_00, atol=1e-5)
     print(f'\nConv[0,0,0] vs Perceive(same patch): '

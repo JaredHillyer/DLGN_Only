@@ -12,6 +12,7 @@ Usage:
     python scripts/test_mnist_layers.py
     python scripts/test_mnist_layers.py --dataset mnist20x20 --model both
     python scripts/test_mnist_layers.py --train-steps 10 --storage-root dataset_storage
+    python scripts/test_mnist_layers.py --preset realistic
 """
 from __future__ import annotations
 
@@ -30,10 +31,31 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 
+REALISTIC_PRESET = {
+    'regular_neurons': 1020,
+    'regular_layers': 8,
+    'conv_channels': 32,
+    'conv_depth': 2,
+    'conv_kernel_size': 3,
+    'conv_stride': 1,
+    'pool_size': 2,
+    'conv_head_neurons': 1020,
+    'conv_head_layers': 6,
+}
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description='Smoke-test regular and convolutional DLGN models on MNIST'
+    )
+    parser.add_argument(
+        '--preset',
+        default='smoke',
+        choices=['smoke', 'realistic'],
+        help=(
+            'Argument preset to apply before explicit CLI overrides. '
+            '"realistic" uses a large MNIST-sized network.'
+        ),
     )
     parser.add_argument(
         '--dataset',
@@ -91,6 +113,29 @@ def build_parser() -> argparse.ArgumentParser:
         dest='dirichlet_concentration',
     )
     return parser
+
+
+def apply_preset(args: argparse.Namespace, cli_args: list[str]) -> None:
+    """Apply preset defaults unless a field was explicitly set on the CLI."""
+    if args.preset != 'realistic':
+        return
+
+    explicit_flags = set(cli_args)
+    flag_map = {
+        'regular_neurons': '--regular-neurons',
+        'regular_layers': '--regular-layers',
+        'conv_channels': '--conv-channels',
+        'conv_depth': '--conv-depth',
+        'conv_kernel_size': '--conv-kernel-size',
+        'conv_stride': '--conv-stride',
+        'pool_size': '--pool-size',
+        'conv_head_neurons': '--conv-head-neurons',
+        'conv_head_layers': '--conv-head-layers',
+    }
+
+    for key, value in REALISTIC_PRESET.items():
+        if flag_map[key] not in explicit_flags:
+            setattr(args, key, value)
 
 
 def build_data_config(args: argparse.Namespace) -> dict:
@@ -586,8 +631,12 @@ def main(argv=None) -> int:
     from dlgn.data.registry import num_classes_of_dataset
     from dlgn.utils.seeding import seed_all
 
+    if argv is None:
+        argv = sys.argv[1:]
+
     parser = build_parser()
     args = parser.parse_args(argv)
+    apply_preset(args, argv)
 
     storage_root = Path(args.storage_root).resolve()
     print(f'Dataset storage root: {storage_root}')
@@ -610,6 +659,11 @@ def main(argv=None) -> int:
 
     print(f'Dataset: {args.dataset}  class_count={class_count}  batch_size={args.batch_size}')
     print(f'Train steps per path: {args.train_steps}')
+    if args.preset == 'realistic':
+        print(
+            'Preset: realistic '
+            '(using 1020 neurons instead of 1024 because GroupSum requires divisibility by 10)'
+        )
 
     if args.model in ('regular', 'both'):
         run_regular_path(args, train_loader, test_loader, class_count)

@@ -459,3 +459,13 @@ def main(argv=None) -> int:
 
 if __name__ == '__main__':
     raise SystemExit(main())
+
+
+# python scripts/test_mnist_layers.py --model conv \
+#   --conv-logic-family full --conv-architecture softmax \
+#   --conv-head-logic-family light --conv-head-architecture light_sigmoid
+
+# # All-light
+# python scripts/test_mnist_layers.py --model conv \
+#   --conv-logic-family light --conv-architecture light_sigmoid \
+#   --conv-head-logic-family light --conv-head-architecture light_sigmoid

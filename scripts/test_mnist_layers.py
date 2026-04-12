@@ -168,29 +168,48 @@ def run_regular_path(args, train_loader, test_loader, class_count):
 # Convolutional DLGN path
 # ---------------------------------------------------------------------------
 
-def conv_extract(conv_params, conv_wires, images, training, kernel_size, stride, pool_size):
+def conv_extract(conv_params, conv_wires, images, training, key,
+                 kernel_size, stride, pool_size,
+                 conv_architecture='softmax', gumb_tau=1.0,
+                 dirichlet_concentration=1.0, conv_logic_family='full'):
     """Conv layer → or-pool → feature maps."""
     from dlgn.models.conv import run_conv_gate_layer, or_pool
     x = run_conv_gate_layer(conv_params, conv_wires, images, training,
-                            kernel_size=kernel_size, stride=stride)
+                            key=key, kernel_size=kernel_size, stride=stride,
+                            architecture=conv_architecture,
+                            gumb_tau=gumb_tau,
+                            dirichlet_concentration=dirichlet_concentration,
+                            logic_family=conv_logic_family)
     if pool_size > 1:
         x = or_pool(x, kernel_size=(pool_size, pool_size))
     return x
 
 
 def conv_forward(params, wires, images, training, key, cfg: HeadConfig,
-                 kernel_size, stride, pool_size):
+                 kernel_size, stride, pool_size,
+                 conv_architecture='softmax', conv_logic_family='full'):
     """Full conv pipeline: extract features → flatten → head → class logits."""
+    key, conv_key = jax.random.split(key)
     feats = conv_extract(params['conv'], wires['conv'], images, training,
-                         kernel_size, stride, pool_size)
+                         conv_key, kernel_size, stride, pool_size,
+                         conv_architecture=conv_architecture,
+                         gumb_tau=cfg.gumb_tau,
+                         dirichlet_concentration=cfg.dirichlet_concentration,
+                         conv_logic_family=conv_logic_family)
     flat = feats.reshape(feats.shape[0], -1)
     return head_forward(params['head'], wires['head'], flat, training, key, cfg)
 
 
-def conv_evaluate(params, wires, images, labels, key, cfg, kernel_size, stride, pool_size):
+def conv_evaluate(params, wires, images, labels, key, cfg, kernel_size, stride, pool_size,
+                  conv_architecture='softmax', conv_logic_family='full'):
     """Soft + hard eval for the conv model."""
-    logits_soft = conv_forward(params, wires, images, True, key, cfg, kernel_size, stride, pool_size)
-    logits_hard = conv_forward(params, wires, images, False, key, cfg, kernel_size, stride, pool_size)
+    key1, key2 = jax.random.split(key)
+    logits_soft = conv_forward(params, wires, images, True, key1, cfg,
+                               kernel_size, stride, pool_size,
+                               conv_architecture, conv_logic_family)
+    logits_hard = conv_forward(params, wires, images, False, key2, cfg,
+                               kernel_size, stride, pool_size,
+                               conv_architecture, conv_logic_family)
     return {
         'soft_loss': float(optax.softmax_cross_entropy_with_integer_labels(logits_soft, labels).mean()),
         'hard_loss': float(optax.softmax_cross_entropy_with_integer_labels(logits_hard, labels).mean()),
@@ -208,14 +227,28 @@ def run_conv_path(args, train_loader, test_loader, class_count):
 
     kernel_size = (args.conv_kernel_size, args.conv_kernel_size)
     stride = (args.conv_stride, args.conv_stride)
-    cfg = HeadConfig(class_count=class_count, sum_tau=args.sum_tau)
+
+    # Conv and head can use different logic families/architectures
+    conv_logic = args.conv_logic_family
+    conv_arch = args.conv_architecture
+    head_logic = args.conv_head_logic_family
+    head_arch = args.conv_head_architecture
+
+    cfg = HeadConfig(
+        architecture=head_arch,
+        logic_family=head_logic,
+        class_count=class_count,
+        sum_tau=args.sum_tau,
+        gumb_tau=args.gumb_tau,
+        dirichlet_concentration=args.dirichlet_concentration,
+    )
 
     # --- Init conv layer ---
     sample_images, _ = to_image_jax(next(iter(train_loader)))
     in_channels = sample_images.shape[-1]
 
     key = jax.random.PRNGKey(args.seed + 1_000)
-    key, conv_key, head_key = jax.random.split(key, 3)
+    key, conv_key, head_key, probe_key = jax.random.split(key, 4)
     conv_params, conv_wires = init_conv_gate_layer(
         conv_key,
         in_channels=in_channels,
@@ -223,12 +256,14 @@ def run_conv_path(args, train_loader, test_loader, class_count):
         kernel_size=kernel_size,
         depth=args.conv_depth,
         connection_type='random',
-        logic_family='full',
+        logic_family=conv_logic,
     )
 
     # --- Init head (sized from a probe forward pass) ---
     probe_feats = conv_extract(conv_params, conv_wires, sample_images, False,
-                               kernel_size, stride, args.pool_size)
+                               probe_key, kernel_size, stride, args.pool_size,
+                               conv_architecture=conv_arch,
+                               conv_logic_family=conv_logic)
     head_input_dim = int(np.prod(probe_feats.shape[1:]))
 
     head_params, head_wires = init_logic_gate_network(
@@ -237,7 +272,7 @@ def run_conv_path(args, train_loader, test_loader, class_count):
         num_layers=args.conv_head_layers,
         connections='random',
         key=head_key,
-        logic_family='full',
+        logic_family=head_logic,
     )
 
     params = {'conv': conv_params, 'head': head_params}
@@ -255,7 +290,8 @@ def run_conv_path(args, train_loader, test_loader, class_count):
     test_images, test_y = to_image_jax(next(iter(test_loader)))
     eval_key = jax.random.PRNGKey(args.seed + 20_000)
     before = conv_evaluate(state.params, wires, test_images, test_y, eval_key,
-                           cfg, kernel_size, stride, args.pool_size)
+                           cfg, kernel_size, stride, args.pool_size,
+                           conv_arch, conv_logic)
 
     # --- Train ---
     train_iter = cycle_loader(train_loader)
@@ -265,9 +301,11 @@ def run_conv_path(args, train_loader, test_loader, class_count):
 
         def loss_fn(p):
             logits_s = conv_forward(p, wires, batch_images, True, subkey, cfg,
-                                    kernel_size, stride, args.pool_size)
+                                    kernel_size, stride, args.pool_size,
+                                    conv_arch, conv_logic)
             logits_h = conv_forward(p, wires, batch_images, False, subkey, cfg,
-                                    kernel_size, stride, args.pool_size)
+                                    kernel_size, stride, args.pool_size,
+                                    conv_arch, conv_logic)
             soft = optax.softmax_cross_entropy_with_integer_labels(logits_s, batch_y).mean()
             hard = optax.softmax_cross_entropy_with_integer_labels(logits_h, batch_y).mean()
             return soft, {'hard': hard}
@@ -280,9 +318,10 @@ def run_conv_path(args, train_loader, test_loader, class_count):
     # --- Eval after training ---
     eval_key = jax.random.PRNGKey(args.seed + 30_000)
     after = conv_evaluate(state.params, wires, test_images, test_y, eval_key,
-                          cfg, kernel_size, stride, args.pool_size)
+                          cfg, kernel_size, stride, args.pool_size,
+                          conv_arch, conv_logic)
 
-    print('\n[conv] conv DLGN + head on MNIST')
+    print(f'\n[conv] conv DLGN ({conv_logic}) + head ({head_logic}) on MNIST')
     print(f'  input={tuple(sample_images.shape[1:])}  conv_out={args.conv_channels}  '
           f'depth={args.conv_depth}  pooled={tuple(probe_feats.shape[1:])}  '
           f'head_in={head_input_dim}')
@@ -337,8 +376,15 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument('--conv-kernel-size', type=int, default=3, dest='conv_kernel_size')
     g.add_argument('--conv-stride', type=int, default=1, dest='conv_stride')
     g.add_argument('--pool-size', type=int, default=2, dest='pool_size')
+    g.add_argument('--conv-logic-family', default='full', choices=['full', 'light'],
+                   dest='conv_logic_family')
+    g.add_argument('--conv-architecture', default='softmax', dest='conv_architecture')
     g.add_argument('--conv-head-neurons', type=int, default=40, dest='conv_head_neurons')
     g.add_argument('--conv-head-layers', type=int, default=2, dest='conv_head_layers')
+    g.add_argument('--conv-head-logic-family', default='full', choices=['full', 'light'],
+                   dest='conv_head_logic_family')
+    g.add_argument('--conv-head-architecture', default='softmax',
+                   dest='conv_head_architecture')
 
     g = p.add_argument_group('optimizer / decoder')
     g.add_argument('--learning-rate', type=float, default=0.01, dest='learning_rate')

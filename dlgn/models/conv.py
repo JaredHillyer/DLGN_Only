@@ -11,60 +11,10 @@ Based on:
 import jax
 import jax.numpy as jnp
 from jax import lax
-from functools import partial
 
-# TODO: verify these imports match your project's actual signatures.
-# If init_gate_layer signature is (key, in_dim, out_dim, connection_type, logic_family)
-# then the calls below are correct. If it's (key, in_dim, out_dim, connections_str)
-# like the DLCA code, drop the logic_family arg.
 from dlgn.models.initialization import init_gate_layer
+from dlgn.models.network import run_layer
 from dlgn.types import ConnectionType, LogicFamily
-
-
-# ---------------------------------------------------------------------------
-# Core gate operations (same 16 binary ops as difflogic / DLCA)
-# ---------------------------------------------------------------------------
-
-def bin_op_all(a, b):
-    """All 16 binary operations on relaxed inputs."""
-    return jnp.stack([
-        jnp.zeros_like(a),   # 0:  FALSE
-        a * b,                # 1:  AND
-        a - a * b,            # 2:  A AND NOT B
-        a,                    # 3:  A
-        b - a * b,            # 4:  NOT A AND B
-        b,                    # 5:  B
-        a + b - 2 * a * b,   # 6:  XOR
-        a + b - a * b,       # 7:  OR
-        1 - (a + b - a * b), # 8:  NOR
-        1 - (a + b - 2*a*b), # 9:  XNOR
-        1 - b,               # 10: NOT B
-        1 - b + a * b,       # 11: A OR NOT B
-        1 - a,               # 12: NOT A
-        1 - a + a * b,       # 13: NOT A OR B
-        1 - a * b,           # 14: NAND
-        jnp.ones_like(a),    # 15: TRUE
-    ], axis=-1)
-
-
-def run_gate_layer(a, b, logits, training):
-    """Apply learned gates between paired inputs a, b.
-
-    Args:
-        a, b: shape (..., n_gates)
-        logits: shape (n_gates, 16)
-        training: bool — soft (softmax) vs hard (argmax one-hot)
-    Returns:
-        shape (..., n_gates)
-    """
-    combos = bin_op_all(a, b)  # (..., n_gates, 16)
-    weights = jax.lax.cond(
-        training,
-        lambda w: jax.nn.softmax(w, axis=-1),
-        lambda w: jax.nn.one_hot(jnp.argmax(w, axis=-1), 16),
-        logits,
-    )
-    return jnp.sum(combos * weights, axis=-1)
 
 
 # ---------------------------------------------------------------------------
@@ -77,8 +27,8 @@ def init_conv_gate_layer(
     out_channels,
     kernel_size=(3, 3),
     depth=2,
-    connection_type=ConnectionType,
-    logic_family=LogicFamily,
+    connection_type: ConnectionType = 'random',
+    logic_family: LogicFamily = 'full',
 ):
     """Initialize a single convolutional DLGN layer.
 
@@ -124,7 +74,7 @@ def init_conv_gate_layer(
             # init_gate_layer returns (gate_logits, [indices_a, indices_b])
             logits, wires = init_gate_layer(
                 layer_key, layer_in, layer_out,
-                'random', 'full',
+                connection_type, logic_family,
             )
             tree_logits.append(logits)
             tree_wires.append(wires)
@@ -145,8 +95,13 @@ def run_conv_gate_layer(
     wires,
     x,
     training,
+    key,
     kernel_size=(3, 3),
     stride=(1, 1),
+    architecture='softmax',
+    gumb_tau=1.0,
+    dirichlet_concentration=1.0,
+    logic_family: LogicFamily = 'full',
 ):
     """Run a convolutional DLGN layer.
 
@@ -155,8 +110,13 @@ def run_conv_gate_layer(
         wires:  list[list[(wa,wb)]] — wires[k][layer_i] index pairs for kernel k.
         x: input (B, H, W, C), values in [0, 1].
         training: bool — soft vs hard decoding.
+        key: PRNG key for stochastic decoders (gumbel, dirichlet).
         kernel_size: (kh, kw) must match what was used in init.
         stride: (sh, sw) convolution stride.
+        architecture: decoder architecture (softmax, gumbel, light_sigmoid, etc.).
+        gumb_tau: Gumbel-softmax temperature.
+        dirichlet_concentration: Dirichlet concentration parameter.
+        logic_family: 'full' (16 gates) or 'light' (4-element truth table).
 
     Returns:
         (B, out_h, out_w, out_channels)
@@ -178,14 +138,26 @@ def run_conv_gate_layer(
         dimension_numbers=('NHWC', 'HWIO', 'NHWC'),
     )  # (B, out_h, out_w, patch_dim)
 
+    # Split keys: one per kernel × layer
+    all_keys = jax.random.split(key, out_channels * depth)
+
     # --- Apply each kernel's gate tree to every patch ---
     def apply_tree(patch_flat, k):
         """Run kernel k's gate tree on one flattened patch → scalar."""
         z = patch_flat
         for layer_i in range(depth):
-            wa, wb = wires[k][layer_i]
-            g = params[k][layer_i]
-            z = run_gate_layer(z[wa], z[wb], g, training)
+            layer_key = all_keys[k * depth + layer_i]
+            z = run_layer(
+                params[k][layer_i],
+                wires[k][layer_i],
+                z,
+                training,
+                layer_key,
+                architecture,
+                gumb_tau,
+                dirichlet_concentration,
+                logic_family,
+            )
         return z.squeeze(-1)  # root gate output (scalar)
 
     def apply_all_kernels(patch_flat):
@@ -237,20 +209,37 @@ if __name__ == '__main__':
     key = jax.random.key(0)
     x = jax.random.uniform(key, (2, 8, 8, 3))  # batch=2, 8×8, 3 channels
 
-    # --- Conv layer ---
+    # --- Conv layer (full family) ---
+    key, init_key, run_key = jax.random.split(key, 3)
     params, wires = init_conv_gate_layer(
-        key,
+        init_key,
         in_channels=3,
         out_channels=4,
         kernel_size=(3, 3),
         depth=2,
+        logic_family='full',
     )
-    y = run_conv_gate_layer(params, wires, x, training=True,
-                            kernel_size=(3, 3), stride=(1, 1))
-    print(f'ConvDLGN  input {x.shape} -> output {y.shape}')
-    # expect (2, 6, 6, 4)
+    y = run_conv_gate_layer(params, wires, x, training=True, key=run_key,
+                            kernel_size=(3, 3), stride=(1, 1),
+                            logic_family='full')
+    print(f'ConvDLGN (full)   input {x.shape} -> output {y.shape}')
+
+    # --- Conv layer (light family) ---
+    key, init_key, run_key = jax.random.split(key, 3)
+    params_l, wires_l = init_conv_gate_layer(
+        init_key,
+        in_channels=3,
+        out_channels=4,
+        kernel_size=(3, 3),
+        depth=2,
+        logic_family='light',
+    )
+    y_l = run_conv_gate_layer(params_l, wires_l, x, training=True, key=run_key,
+                              kernel_size=(3, 3), stride=(1, 1),
+                              architecture='light_sigmoid',
+                              logic_family='light')
+    print(f'ConvDLGN (light)  input {x.shape} -> output {y_l.shape}')
 
     # --- Or-pool ---
     y2 = or_pool(y, kernel_size=(2, 2))
-    print(f'OrPool    input {y.shape} -> output {y2.shape}')
-    # expect (2, 3, 3, 4)
+    print(f'OrPool            input {y.shape} -> output {y2.shape}')

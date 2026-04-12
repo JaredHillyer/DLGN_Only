@@ -290,12 +290,12 @@ if __name__ == '__main__':
     key = jax.random.PRNGKey(0)
 
     # --- Perceive layer (patch input, like DLCA) ---
-    key, k1 = jax.random.split(key)
-    patch = jax.random.uniform(k1, (4, 9, 3))  # batch=4, 9 neighbors, 3 channels
+    # key, k1 = jax.random.split(key)
+    patch = jax.random.uniform(key, (4, 9, 3))  # batch=4, 9 neighbors, 3 channels
 
-    key, k2 = jax.random.split(key)
+    # key, k2 = jax.random.split(key)
     p_params, p_wires = init_perceive_layer(
-        k2, patch_dim=9 * 3, n_kernels=8, depth=2,
+        key, patch_dim=9 * 3, n_kernels=8, depth=2,
     )
     feats = run_perceive(p_params, p_wires, patch, training=True)
     print(f'Perceive  input {patch.shape} -> output {feats.shape}')
@@ -304,9 +304,9 @@ if __name__ == '__main__':
     # --- Conv layer (image input) ---
     x = jax.random.uniform(key, (2, 8, 8, 3))
 
-    key, k3 = jax.random.split(key)
+    # key, k3 = jax.random.split(key)
     c_params, c_wires = init_conv_gate_layer(
-        k3, in_channels=3, out_channels=4,
+        key, in_channels=3, out_channels=4,
         kernel_size=(3, 3), depth=2,
     )
     y = run_conv_gate_layer(c_params, c_wires, x, training=True,

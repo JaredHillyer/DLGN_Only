@@ -341,12 +341,12 @@ PRESETS = {
         'regular_neurons': 1020,
         'regular_layers': 8,
         'conv_channels': 32,
-        'conv_depth': 2,
+        'conv_depth': 5,
         'conv_kernel_size': 3,
         'conv_stride': 1,
         'pool_size': 2,
         'conv_head_neurons': 1020,
-        'conv_head_layers': 6,
+        'conv_head_layers': 4,
     },
 }
 
@@ -364,8 +364,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument('--seed', type=int, default=0)
 
     g = p.add_argument_group('regular model')
-    g.add_argument('--regular-neurons', type=int, default=40, dest='regular_neurons')
-    g.add_argument('--regular-layers', type=int, default=2, dest='regular_layers')
+    g.add_argument('--regular-neurons', type=int, default=1200, dest='regular_neurons')
+    g.add_argument('--regular-layers', type=int, default=5, dest='regular_layers')
     g.add_argument('--regular-logic-family', default='full', choices=['full', 'light'],
                    dest='regular_logic_family')
     g.add_argument('--regular-architecture', default='softmax', dest='regular_architecture')

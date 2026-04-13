@@ -301,6 +301,25 @@ def or_pool(x, kernel_size=(2, 2), stride=None):
         padding='VALID',
     )
 
+# ---------------------------------------------------------------------------
+# Conv-Pool: Run one after the other
+# ---------------------------------------------------------------------------
+# def init_conv_gate_layer(
+#     key,
+#     in_channels,
+#     out_channels,
+#     kernel_size=(3, 3),
+#     depth=2,
+#     connection_type='random',
+#     logic_family='full',
+# ):
+# def run_conv_gate_layer(
+#     params, wires, x, training, key,
+#     kernel_size=(3, 3), stride=(1, 1),
+#     architecture='softmax', gumb_tau=1.0,
+#     dirichlet_concentration=1.0, logic_family='full',
+# ):
+# def or_pool(x, kernel_size=(2, 2), stride=None):
 
 # ---------------------------------------------------------------------------
 # Smoke test
@@ -311,21 +330,29 @@ if __name__ == '__main__':
     # --- Perceive layer (full family) ---
     key, k1, rk1 = jax.random.split(key, 3)
     patch = jax.random.uniform(k1, (4, 9, 3))  # batch=4, 9 neighbors, 3 channels
+    print("patch", patch, '\n')
 
     key, k2 = jax.random.split(key)
     p_params, p_wires = init_perceive_layer(
         k2, patch_dim=9 * 3, n_kernels=8, depth=2, logic_family='full',
     )
+    print("p_params, p_wires", p_params, p_wires, '\n')
+
     feats = run_perceive(p_params, p_wires, patch, training=True, key=rk1)
+    print("feats", patch, '\n')
     print(f'Perceive (full)   input {patch.shape} -> output {feats.shape}')
+
+
 
     # --- Perceive layer (light family) ---
     key, k3, rk2 = jax.random.split(key, 3)
     p_params_l, p_wires_l = init_perceive_layer(
         k3, patch_dim=9 * 3, n_kernels=8, depth=2, logic_family='light',
     )
+    print("p_params_l, p_wires_l", p_params_l, p_wires_l, '\n')
     feats_l = run_perceive(p_params_l, p_wires_l, patch, training=True, key=rk2,
                            architecture='light_sigmoid', logic_family='light')
+    print("feats", feats_l, '\n')
     print(f'Perceive (light)  input {patch.shape} -> output {feats_l.shape}')
 
     # --- Conv layer (full family) ---
@@ -337,8 +364,10 @@ if __name__ == '__main__':
         k5, in_channels=3, out_channels=4,
         kernel_size=(3, 3), depth=2, logic_family='full',
     )
+    print("c_params, c_wires", c_params, c_wires, '\n')
     y = run_conv_gate_layer(c_params, c_wires, x, training=True, key=rk3,
                             kernel_size=(3, 3), stride=(1, 1))
+    print("y", y, '\n')
     print(f'ConvDLGN (full)   input {x.shape} -> output {y.shape}')
 
     # --- Conv layer (light family) ---
@@ -347,23 +376,31 @@ if __name__ == '__main__':
         k6, in_channels=3, out_channels=4,
         kernel_size=(3, 3), depth=2, logic_family='light',
     )
+    print("c_params_l, c_wires_l", c_params_l, c_wires_l, '\n')
     y_l = run_conv_gate_layer(c_params_l, c_wires_l, x, training=True, key=rk4,
                               kernel_size=(3, 3), stride=(1, 1),
                               architecture='light_sigmoid', logic_family='light')
+    print("y_l", y_l, '\n')
     print(f'ConvDLGN (light)  input {x.shape} -> output {y_l.shape}')
 
     # --- Or-pool ---
     y2 = or_pool(y, kernel_size=(2, 2))
+    print("y2", y2, '\n')
     print(f'OrPool            input {y.shape} -> output {y2.shape}')
 
     # --- Verify conv and perceive agree on the same patch ---
     key, rk5 = jax.random.split(key)
     one_patch_flat = x[0, 0:3, 0:3, :].reshape(1, -1)  # (1, 27)
-
+    print("one_patch_flat", one_patch_flat, '\n')
+    # one_patch_flat = x[0, 0:3, 0:3, :].transpose(2,0,1).reshape(-1)  # (1, 27)
+    # patch[0,0,0,:] == x[0, 0:3, 0:3, :].transpose(2,0,1).reshape(-1)
+    # jnp.array_equal(patch[0,0,0,:], x[0, 0:3, 0:3, :].transpose(2,0,1).reshape(-1))
     conv_at_00 = y[0, 0, 0, :]
+    print("conv_at_00", conv_at_00, '\n')
     perceive_at_00 = run_perceive(c_params, c_wires, one_patch_flat,
                                   training=True, key=rk3)
-
+    print("perceive_at_00", perceive_at_00, '\n')
+    
     match = jnp.allclose(conv_at_00, perceive_at_00, atol=1e-5)
     print(f'\nConv[0,0,0] vs Perceive(same patch): '
           f'{"MATCH" if match else "MISMATCH"}')

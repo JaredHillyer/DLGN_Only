@@ -326,20 +326,25 @@ def or_pool(x, kernel_size=(2, 2), stride=None):
 # ---------------------------------------------------------------------------
 if __name__ == '__main__':
     key = jax.random.PRNGKey(0)
+    scream_in_rage = False #USE WHEN YOU HAVE BAD INDEX LOGIC
 
     # --- Perceive layer (full family) ---
     key, k1, rk1 = jax.random.split(key, 3)
-    patch = jax.random.uniform(k1, (4, 9, 3))  # batch=4, 9 neighbors, 3 channels
-    print("patch", patch, '\n')
+    # patch = jax.random.uniform(k1, (4, 9, 3))  # batch=4, 9 neighbors, 3 channels
+    patch = jax.random.uniform(jax.random.PRNGKey(0), (4, 9, 3))  # batch=4, 9 neighbors, 3 channels
+    if(scream_in_rage):
+        print("patch", patch, '\n')
 
     key, k2 = jax.random.split(key)
     p_params, p_wires = init_perceive_layer(
         k2, patch_dim=9 * 3, n_kernels=8, depth=2, logic_family='full',
     )
-    print("p_params, p_wires", p_params, p_wires, '\n')
+    if(scream_in_rage):
+        print("p_params, p_wires", p_params, p_wires, '\n')
 
-    feats = run_perceive(p_params, p_wires, patch, training=True, key=rk1)
-    print("feats", patch, '\n')
+    feats = run_perceive(p_params, p_wires, patch, training=True, key=jax.random.PRNGKey(0))
+    if(scream_in_rage):
+        print("feats", patch, '\n')
     print(f'Perceive (full)   input {patch.shape} -> output {feats.shape}')
 
 
@@ -347,59 +352,78 @@ if __name__ == '__main__':
     # --- Perceive layer (light family) ---
     key, k3, rk2 = jax.random.split(key, 3)
     p_params_l, p_wires_l = init_perceive_layer(
-        k3, patch_dim=9 * 3, n_kernels=8, depth=2, logic_family='light',
+        jax.random.PRNGKey(0), patch_dim=9 * 3, n_kernels=8, depth=2, logic_family='light',
     )
-    print("p_params_l, p_wires_l", p_params_l, p_wires_l, '\n')
-    feats_l = run_perceive(p_params_l, p_wires_l, patch, training=True, key=rk2,
+    if(scream_in_rage):
+        print("p_params_l, p_wires_l", p_params_l, p_wires_l, '\n')
+    feats_l = run_perceive(p_params_l, p_wires_l, patch, training=True, key=jax.random.PRNGKey(0),
                            architecture='light_sigmoid', logic_family='light')
-    print("feats", feats_l, '\n')
+    if(scream_in_rage):
+        print("feats", feats_l, '\n')
     print(f'Perceive (light)  input {patch.shape} -> output {feats_l.shape}')
 
     # --- Conv layer (full family) ---
     key, k4, rk3 = jax.random.split(key, 3)
-    x = jax.random.uniform(k4, (2, 8, 8, 3))
+    x = jax.random.uniform(jax.random.PRNGKey(0), (2, 8, 8, 3))
 
     key, k5 = jax.random.split(key)
     c_params, c_wires = init_conv_gate_layer(
-        k5, in_channels=3, out_channels=4,
+        jax.random.PRNGKey(0), in_channels=3, out_channels=4,
         kernel_size=(3, 3), depth=2, logic_family='full',
     )
-    print("c_params, c_wires", c_params, c_wires, '\n')
-    y = run_conv_gate_layer(c_params, c_wires, x, training=True, key=rk3,
+    if(scream_in_rage):
+        print("c_params, c_wires", c_params, c_wires, '\n')
+    y = run_conv_gate_layer(c_params, c_wires, x, training=True, key=jax.random.PRNGKey(0),
                             kernel_size=(3, 3), stride=(1, 1))
-    print("y", y, '\n')
+    if(scream_in_rage):
+        print("y", y, '\n')
     print(f'ConvDLGN (full)   input {x.shape} -> output {y.shape}')
 
     # --- Conv layer (light family) ---
-    key, k6, rk4 = jax.random.split(key, 3)
+    key, k6, rk4 = jax.random.split(jax.random.PRNGKey(0), 3)
     c_params_l, c_wires_l = init_conv_gate_layer(
-        k6, in_channels=3, out_channels=4,
+        jax.random.PRNGKey(0), in_channels=3, out_channels=4,
         kernel_size=(3, 3), depth=2, logic_family='light',
     )
-    print("c_params_l, c_wires_l", c_params_l, c_wires_l, '\n')
-    y_l = run_conv_gate_layer(c_params_l, c_wires_l, x, training=True, key=rk4,
+    if(scream_in_rage):
+        print("c_params_l, c_wires_l", c_params_l, c_wires_l, '\n')
+    y_l = run_conv_gate_layer(c_params_l, c_wires_l, x, training=True, key=jax.random.PRNGKey(0),
                               kernel_size=(3, 3), stride=(1, 1),
                               architecture='light_sigmoid', logic_family='light')
-    print("y_l", y_l, '\n')
+    if(scream_in_rage):
+        print("y_l", y_l, '\n')
     print(f'ConvDLGN (light)  input {x.shape} -> output {y_l.shape}')
 
     # --- Or-pool ---
     y2 = or_pool(y, kernel_size=(2, 2))
-    print("y2", y2, '\n')
+    if(scream_in_rage):
+        print("y2", y2, '\n')
     print(f'OrPool            input {y.shape} -> output {y2.shape}')
 
     # --- Verify conv and perceive agree on the same patch ---
     key, rk5 = jax.random.split(key)
-    one_patch_flat = x[0, 0:3, 0:3, :].reshape(1, -1)  # (1, 27)
-    print("one_patch_flat", one_patch_flat, '\n')
+    one_patch_flat = lax.conv_general_dilated_patches(
+        x, (3, 3), (1, 1),
+        padding='VALID',
+        dimension_numbers=('NHWC', 'HWIO', 'NHWC'),
+    )[0, 0, 0, :].reshape(1, -1)
+    
+    # Manual patch flattening with x[0, 0:3, 0:3, :].reshape(...) does not
+    # match conv_general_dilated_patches() ordering here, so it produces a
+    # misleading smoke-test mismatch even when the conv/perceive logic agrees.
+    # one_patch_flat = x[0, 0:3, 0:3, :].reshape(1, -1)  # (1, 27)
+    # if(scream_in_rage):
+    #     print("one_patch_flat", one_patch_flat, '\n')
     # one_patch_flat = x[0, 0:3, 0:3, :].transpose(2,0,1).reshape(-1)  # (1, 27)
     # patch[0,0,0,:] == x[0, 0:3, 0:3, :].transpose(2,0,1).reshape(-1)
     # jnp.array_equal(patch[0,0,0,:], x[0, 0:3, 0:3, :].transpose(2,0,1).reshape(-1))
     conv_at_00 = y[0, 0, 0, :]
-    print("conv_at_00", conv_at_00, '\n')
+    if(scream_in_rage):
+        print("conv_at_00", conv_at_00, '\n')
     perceive_at_00 = run_perceive(c_params, c_wires, one_patch_flat,
-                                  training=True, key=rk3)
-    print("perceive_at_00", perceive_at_00, '\n')
+                                  training=True, key=jax.random.PRNGKey(0))
+    if(scream_in_rage):
+        print("perceive_at_00", perceive_at_00, '\n')
     
     match = jnp.allclose(conv_at_00, perceive_at_00, atol=1e-5)
     print(f'\nConv[0,0,0] vs Perceive(same patch): '

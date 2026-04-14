@@ -1,19 +1,24 @@
-"""Smoke-test regular and convolutional DLGN layers on MNIST.
+"""Train and evaluate DLGN models on MNIST.
 
-Exercises two paths against a real MNIST loader:
+Supports two model types:
 1. A regular (flat) DLGN classifier.
-2. A convolutional DLGN feature extractor + regular DLGN head.
+2. A deep convolutional DLGN: multiple conv blocks → flatten → FC stack → GroupSum.
 
 Usage:
-    python scripts/test_mnist_layers.py
-    python scripts/test_mnist_layers.py --dataset mnist20x20 --model both
-    python scripts/test_mnist_layers.py --train-steps 10
-    python scripts/test_mnist_layers.py --preset realistic
+    python scripts/test_mnist_layers.py --preset smoke
+    python scripts/test_mnist_layers.py --preset small --model conv
+    python scripts/test_mnist_layers.py --preset medium --model conv
+
+Overnight runs:
+    nohup python scripts/test_mnist_layers.py --preset small --model conv > small.log 2>&1 &
+    nohup python scripts/test_mnist_layers.py --preset medium --model conv > medium.log 2>&1 &
 """
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,7 +33,7 @@ import optax
 
 
 # ---------------------------------------------------------------------------
-# Helpers to avoid repeating forward_logits' 11-arg signature everywhere
+# Helpers
 # ---------------------------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -93,7 +98,7 @@ def to_image_jax(batch):
 
 
 # ---------------------------------------------------------------------------
-# Regular (flat) DLGN path
+# Regular (flat) DLGN path — unchanged
 # ---------------------------------------------------------------------------
 
 def run_regular_path(args, train_loader, test_loader, class_count):
@@ -165,51 +170,60 @@ def run_regular_path(args, train_loader, test_loader, class_count):
 
 
 # ---------------------------------------------------------------------------
-# Convolutional DLGN path
+# Deep convolutional DLGN path
 # ---------------------------------------------------------------------------
 
-def conv_extract(conv_params, conv_wires, images, training, key,
-                 kernel_size, stride, pool_size,
-                 conv_architecture='softmax', gumb_tau=1.0,
-                 dirichlet_concentration=1.0, conv_logic_family='full'):
-    """Conv layer → or-pool → feature maps."""
+def init_fc_stack(key, layer_sizes, connection_type, logic_family):
+    """Init FC DLGN layers with variable widths.
+
+    Args:
+        layer_sizes: [input_dim, hidden_1, hidden_2, ..., output_dim]
+    Returns:
+        (params, wires) — same list format as init_logic_gate_network.
+    """
+    from dlgn.models.initialization import init_gate_layer
+    params, wires = [], []
+    for in_dim, out_dim in zip(layer_sizes[:-1], layer_sizes[1:]):
+        key, subkey = jax.random.split(key)
+        p, w = init_gate_layer(subkey, int(in_dim), int(out_dim),
+                               connection_type, logic_family)
+        params.append(p)
+        wires.append(w)
+    return params, wires
+
+
+def deep_conv_forward(params, wires, images, training, key, cfg,
+                      block_kernels, block_strides, block_paddings,
+                      pool_size, pool_stride):
+    """Conv blocks → flatten → FC head → class logits."""
     from dlgn.models.conv import run_conv_gate_layer, or_pool
-    x = run_conv_gate_layer(conv_params, conv_wires, images, training,
-                            key=key, kernel_size=kernel_size, stride=stride,
-                            architecture=conv_architecture,
-                            gumb_tau=gumb_tau,
-                            dirichlet_concentration=dirichlet_concentration,
-                            logic_family=conv_logic_family)
-    if pool_size > 1:
-        x = or_pool(x, kernel_size=(pool_size, pool_size))
-    return x
+
+    x = images
+    n_blocks = len(params['conv'])
+    for i in range(n_blocks):
+        key, conv_key = jax.random.split(key)
+        pad = block_paddings[i]
+        if pad > 0:
+            x = jnp.pad(x, ((0, 0), (pad, pad), (pad, pad), (0, 0)))
+        ks = (block_kernels[i], block_kernels[i])
+        st = (block_strides[i], block_strides[i])
+        x = run_conv_gate_layer(
+            params['conv'][i], wires['conv'][i], x, training, conv_key,
+            kernel_size=ks, stride=st,
+            architecture=cfg.architecture, logic_family=cfg.logic_family,
+        )
+        x = or_pool(x, kernel_size=(pool_size, pool_size),
+                     stride=(pool_stride, pool_stride))
+
+    flat = x.reshape(x.shape[0], -1)
+    return head_forward(params['fc'], wires['fc'], flat, training, key, cfg)
 
 
-def conv_forward(params, wires, images, training, key, cfg: HeadConfig,
-                 kernel_size, stride, pool_size,
-                 conv_architecture='softmax', conv_logic_family='full'):
-    """Full conv pipeline: extract features → flatten → head → class logits."""
-    key, conv_key = jax.random.split(key)
-    feats = conv_extract(params['conv'], wires['conv'], images, training,
-                         conv_key, kernel_size, stride, pool_size,
-                         conv_architecture=conv_architecture,
-                         gumb_tau=cfg.gumb_tau,
-                         dirichlet_concentration=cfg.dirichlet_concentration,
-                         conv_logic_family=conv_logic_family)
-    flat = feats.reshape(feats.shape[0], -1)
-    return head_forward(params['head'], wires['head'], flat, training, key, cfg)
-
-
-def conv_evaluate(params, wires, images, labels, key, cfg, kernel_size, stride, pool_size,
-                  conv_architecture='softmax', conv_logic_family='full'):
-    """Soft + hard eval for the conv model."""
+def deep_conv_evaluate(params, wires, images, labels, key, cfg, **conv_kw):
+    """Soft + hard eval for the deep conv model."""
     key1, key2 = jax.random.split(key)
-    logits_soft = conv_forward(params, wires, images, True, key1, cfg,
-                               kernel_size, stride, pool_size,
-                               conv_architecture, conv_logic_family)
-    logits_hard = conv_forward(params, wires, images, False, key2, cfg,
-                               kernel_size, stride, pool_size,
-                               conv_architecture, conv_logic_family)
+    logits_soft = deep_conv_forward(params, wires, images, True, key1, cfg, **conv_kw)
+    logits_hard = deep_conv_forward(params, wires, images, False, key2, cfg, **conv_kw)
     return {
         'soft_loss': float(optax.softmax_cross_entropy_with_integer_labels(logits_soft, labels).mean()),
         'hard_loss': float(optax.softmax_cross_entropy_with_integer_labels(logits_hard, labels).mean()),
@@ -218,65 +232,140 @@ def conv_evaluate(params, wires, images, labels, key, cfg, kernel_size, stride, 
     }
 
 
-def run_conv_path(args, train_loader, test_loader, class_count):
+def make_deep_conv_step(tx, wires, cfg, conv_kw):
+    """Return a JIT-compiled train step for the deep conv model."""
+
+    @jax.jit
+    def step(params, opt_state, images, labels, key):
+        key, subkey = jax.random.split(key)
+
+        def loss_fn(p):
+            logits = deep_conv_forward(p, wires, images, True, subkey, cfg, **conv_kw)
+            return optax.softmax_cross_entropy_with_integer_labels(logits, labels).mean()
+
+        loss, grads = jax.value_and_grad(loss_fn)(params)
+        updates, new_opt_state = tx.update(grads, opt_state, params)
+        new_params = optax.apply_updates(params, updates)
+        return new_params, new_opt_state, key, loss
+
+    return step
+
+
+def run_deep_conv_path(args, train_loader, test_loader, class_count):
+    """Multi-block conv + variable-width FC stack."""
     from dlgn.data.loaders import cycle_loader
-    from dlgn.models.conv import init_conv_gate_layer
-    from dlgn.models.initialization import init_logic_gate_network
+    from dlgn.models.conv import init_conv_gate_layer, run_conv_gate_layer, or_pool
     from dlgn.training.optim import create_optimizer
-    from dlgn.training.state import TrainState
 
-    kernel_size = (args.conv_kernel_size, args.conv_kernel_size)
-    stride = (args.conv_stride, args.conv_stride)
-
-    # Conv and head can use different logic families/architectures
-    conv_logic = args.conv_logic_family
-    conv_arch = args.conv_architecture
-    head_logic = args.conv_head_logic_family
-    head_arch = args.conv_head_architecture
+    logic_family = args.logic_family
+    architecture = args.architecture
 
     cfg = HeadConfig(
-        architecture=head_arch,
-        logic_family=head_logic,
+        architecture=architecture,
+        logic_family=logic_family,
         class_count=class_count,
         sum_tau=args.sum_tau,
         gumb_tau=args.gumb_tau,
         dirichlet_concentration=args.dirichlet_concentration,
     )
 
-    # --- Init conv layer ---
+    # Parse block configs
+    block_channels = args.conv_block_channels
+    block_kernels = args.conv_block_kernel_sizes
+    block_depths = args.conv_block_depths
+    block_paddings = args.conv_block_paddings
+    block_strides = args.conv_block_strides
+    n_blocks = len(block_channels)
+
+    pool_size = args.pool_size
+    pool_stride = args.pool_stride
+    fc_sizes = args.fc_sizes
+
+    # Validate list lengths
+    for name, lst in [('kernel_sizes', block_kernels), ('depths', block_depths),
+                      ('paddings', block_paddings), ('strides', block_strides)]:
+        if len(lst) != n_blocks:
+            print(f'Error: conv_block_{name} has {len(lst)} entries, '
+                  f'expected {n_blocks} (matching conv_block_channels)')
+            return None
+
+    # Validate GroupSum divisibility
+    if fc_sizes[-1] % class_count != 0:
+        print(f'Error: last fc_size ({fc_sizes[-1]}) must be divisible '
+              f'by class_count ({class_count})')
+        return None
+
+    # --- Init conv blocks ---
     sample_images, _ = to_image_jax(next(iter(train_loader)))
     in_channels = sample_images.shape[-1]
 
     key = jax.random.PRNGKey(args.seed + 1_000)
-    key, conv_key, head_key, probe_key = jax.random.split(key, 4)
-    conv_params, conv_wires = init_conv_gate_layer(
-        conv_key,
-        in_channels=in_channels,
-        out_channels=args.conv_channels,
-        kernel_size=kernel_size,
-        depth=args.conv_depth,
-        connection_type='random',
-        logic_family=conv_logic,
+    conv_params_list = []
+    conv_wires_list = []
+    cur_channels = in_channels
+
+    for i in range(n_blocks):
+        key, subkey = jax.random.split(key)
+        ks = (block_kernels[i], block_kernels[i])
+        cp, cw = init_conv_gate_layer(
+            subkey,
+            in_channels=cur_channels,
+            out_channels=block_channels[i],
+            kernel_size=ks,
+            depth=block_depths[i],
+            connection_type='random',
+            logic_family=logic_family,
+        )
+        conv_params_list.append(cp)
+        conv_wires_list.append(cw)
+        cur_channels = block_channels[i]
+
+    # --- Probe to get flatten dim ---
+    key, probe_key = jax.random.split(key)
+    x_probe = sample_images
+    for i in range(n_blocks):
+        pad = block_paddings[i]
+        if pad > 0:
+            x_probe = jnp.pad(x_probe, ((0, 0), (pad, pad), (pad, pad), (0, 0)))
+        ks = (block_kernels[i], block_kernels[i])
+        st = (block_strides[i], block_strides[i])
+        x_probe = run_conv_gate_layer(
+            conv_params_list[i], conv_wires_list[i], x_probe, False, probe_key,
+            kernel_size=ks, stride=st,
+            architecture=architecture, logic_family=logic_family,
+        )
+        x_probe = or_pool(x_probe, kernel_size=(pool_size, pool_size),
+                          stride=(pool_stride, pool_stride))
+
+    flatten_dim = int(np.prod(x_probe.shape[1:]))
+    layer_sizes = [flatten_dim] + list(fc_sizes)
+
+    # --- Init FC stack ---
+    key, fc_key = jax.random.split(key)
+    fc_params, fc_wires = init_fc_stack(
+        fc_key, layer_sizes, 'random', logic_family,
     )
 
-    # --- Init head (sized from a probe forward pass) ---
-    probe_feats = conv_extract(conv_params, conv_wires, sample_images, False,
-                               probe_key, kernel_size, stride, args.pool_size,
-                               conv_architecture=conv_arch,
-                               conv_logic_family=conv_logic)
-    head_input_dim = int(np.prod(probe_feats.shape[1:]))
+    params = {'conv': conv_params_list, 'fc': fc_params}
+    wires = {'conv': conv_wires_list, 'fc': fc_wires}
 
-    head_params, head_wires = init_logic_gate_network(
-        input_dim=head_input_dim,
-        num_neurons=args.conv_head_neurons,
-        num_layers=args.conv_head_layers,
-        connections='random',
-        key=head_key,
-        logic_family=head_logic,
+    conv_kw = dict(
+        block_kernels=block_kernels,
+        block_strides=block_strides,
+        block_paddings=block_paddings,
+        pool_size=pool_size,
+        pool_stride=pool_stride,
     )
 
-    params = {'conv': conv_params, 'head': head_params}
-    wires = {'conv': conv_wires, 'head': head_wires}
+    # --- Print architecture summary ---
+    print(f'\n[conv] deep conv DLGN ({logic_family}/{architecture}) on MNIST')
+    print(f'  input={tuple(sample_images.shape[1:])}')
+    for i in range(n_blocks):
+        print(f'  block {i}: ch={block_channels[i]}  k={block_kernels[i]}  '
+              f'd={block_depths[i]}  pad={block_paddings[i]}  s={block_strides[i]}')
+    print(f'  pool={pool_size}x{pool_size} stride={pool_stride}')
+    print(f'  flatten={flatten_dim}  fc={fc_sizes}')
+    print(f'  sum_tau={cfg.sum_tau}  class_count={class_count}')
 
     # --- Optimizer ---
     tx = create_optimizer({
@@ -284,51 +373,52 @@ def run_conv_path(args, train_loader, test_loader, class_count):
         'weight_decay': args.weight_decay,
         'clip_value': args.clip_value,
     })
-    state = TrainState(params=params, opt_state=tx.init(params), key=key)
+    opt_state = tx.init(params)
 
     # --- Eval before training ---
     test_images, test_y = to_image_jax(next(iter(test_loader)))
     eval_key = jax.random.PRNGKey(args.seed + 20_000)
-    before = conv_evaluate(state.params, wires, test_images, test_y, eval_key,
-                           cfg, kernel_size, stride, args.pool_size,
-                           conv_arch, conv_logic)
+    before = deep_conv_evaluate(params, wires, test_images, test_y, eval_key,
+                                cfg, **conv_kw)
+    print(f'  before: {fmt(before)}')
+
+    # --- Build JIT step ---
+    print('  compiling train step (this may take a while) ...', flush=True)
+    t0 = time.time()
+    train_step = make_deep_conv_step(tx, wires, cfg, conv_kw)
+    # Warm up JIT with first batch
+    train_iter = cycle_loader(train_loader)
+    batch_images, batch_y = to_image_jax(next(train_iter))
+    params, opt_state, key, loss = train_step(
+        params, opt_state, batch_images, batch_y, key,
+    )
+    jax.block_until_ready(loss)
+    compile_time = time.time() - t0
+    print(f'  compiled in {compile_time:.1f}s  step_0_loss={float(loss):.4f}', flush=True)
 
     # --- Train ---
-    train_iter = cycle_loader(train_loader)
-    for _ in range(args.train_steps):
+    eval_every = args.eval_every
+    t_train = time.time()
+    for step in range(2, args.train_steps + 1):
         batch_images, batch_y = to_image_jax(next(train_iter))
-        key, subkey = jax.random.split(state.key)
+        params, opt_state, key, loss = train_step(
+            params, opt_state, batch_images, batch_y, key,
+        )
 
-        def loss_fn(p):
-            logits_s = conv_forward(p, wires, batch_images, True, subkey, cfg,
-                                    kernel_size, stride, args.pool_size,
-                                    conv_arch, conv_logic)
-            logits_h = conv_forward(p, wires, batch_images, False, subkey, cfg,
-                                    kernel_size, stride, args.pool_size,
-                                    conv_arch, conv_logic)
-            soft = optax.softmax_cross_entropy_with_integer_labels(logits_s, batch_y).mean()
-            hard = optax.softmax_cross_entropy_with_integer_labels(logits_h, batch_y).mean()
-            return soft, {'hard': hard}
+        if step % eval_every == 0 or step == args.train_steps:
+            jax.block_until_ready(loss)
+            elapsed = time.time() - t_train
+            eval_key = jax.random.PRNGKey(args.seed + 30_000 + step)
+            metrics = deep_conv_evaluate(params, wires, test_images, test_y,
+                                         eval_key, cfg, **conv_kw)
+            print(f'  step {step:>5}/{args.train_steps}  '
+                  f'train_loss={float(loss):.4f}  {fmt(metrics)}  '
+                  f'[{elapsed:.0f}s]', flush=True)
 
-        (loss, aux), grads = jax.value_and_grad(loss_fn, has_aux=True)(state.params)
-        updates, opt_state = tx.update(grads, state.opt_state, state.params)
-        new_params = optax.apply_updates(state.params, updates)
-        state = state.replace(params=new_params, opt_state=opt_state, key=key)
-
-    # --- Eval after training ---
-    eval_key = jax.random.PRNGKey(args.seed + 30_000)
-    after = conv_evaluate(state.params, wires, test_images, test_y, eval_key,
-                          cfg, kernel_size, stride, args.pool_size,
-                          conv_arch, conv_logic)
-
-    print(f'\n[conv] conv DLGN ({conv_logic}) + head ({head_logic}) on MNIST')
-    print(f'  input={tuple(sample_images.shape[1:])}  conv_out={args.conv_channels}  '
-          f'depth={args.conv_depth}  pooled={tuple(probe_feats.shape[1:])}  '
-          f'head_in={head_input_dim}')
-    print(f'  before: {fmt(before)}')
-    print(f'  after:  {fmt(after)}')
-    print(f'  last_train_loss={float(loss):.4f}')
-    return after
+    # --- Final summary ---
+    total = time.time() - t0
+    print(f'  total time: {total:.0f}s  (compile {compile_time:.1f}s)')
+    return metrics
 
 
 # ---------------------------------------------------------------------------
@@ -336,31 +426,73 @@ def run_conv_path(args, train_loader, test_loader, class_count):
 # ---------------------------------------------------------------------------
 
 PRESETS = {
-    'smoke': {},
-    'realistic': {
-        'regular_neurons': 1020,
-        'regular_layers': 8,
-        'conv_channels': 32,
-        'conv_depth': 2,
-        'conv_kernel_size': 3,
-        'conv_stride': 1,
+    'smoke': {
+        'conv_block_channels': [8],
+        'conv_block_kernel_sizes': [3],
+        'conv_block_depths': [2],
+        'conv_block_paddings': [0],
+        'conv_block_strides': [1],
         'pool_size': 2,
-        'conv_head_neurons': 1020,
-        'conv_head_layers': 6,
+        'pool_stride': 2,
+        'fc_sizes': [40],
+        'logic_family': 'full',
+        'architecture': 'softmax',
+        'train_steps': 5,
+        'eval_every': 1,
+    },
+    'small': {
+        'batch_size': 512,
+        'train_steps': 5000,
+        'learning_rate': 0.01,
+        'weight_decay': 0.0,
+        'clip_value': 1.0,
+        'sum_tau': 6.5,
+        'conv_block_channels': [16, 48, 144],
+        'conv_block_kernel_sizes': [5, 3, 3],
+        'conv_block_depths': [3, 3, 3],
+        'conv_block_paddings': [0, 1, 1],
+        'conv_block_strides': [1, 1, 1],
+        'pool_size': 2,
+        'pool_stride': 2,
+        'fc_sizes': [20480, 10240, 5120],
+        'logic_family': 'full',
+        'architecture': 'softmax',
+        'eval_every': 100,
+    },
+    'medium': {
+        'batch_size': 256,
+        'train_steps': 5000,
+        'learning_rate': 0.01,
+        'weight_decay': 0.0,
+        'clip_value': 1.0,
+        'sum_tau': 28,
+        'conv_block_channels': [64, 192, 576],
+        'conv_block_kernel_sizes': [5, 3, 3],
+        'conv_block_depths': [3, 3, 3],
+        'conv_block_paddings': [0, 1, 1],
+        'conv_block_strides': [1, 1, 1],
+        'pool_size': 2,
+        'pool_stride': 2,
+        'fc_sizes': [81920, 40960, 20480],
+        'logic_family': 'full',
+        'architecture': 'softmax',
+        'eval_every': 100,
     },
 }
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description='Smoke-test DLGN layers on MNIST')
+    p = argparse.ArgumentParser(description='Train DLGN models on MNIST')
 
     p.add_argument('--preset', default='smoke', choices=PRESETS.keys())
     p.add_argument('--dataset', default='mnist',
                    choices=['mnist', 'mnist20x20', 'mnist_bin', 'mnist20x20_bin'])
     p.add_argument('--model', default='both', choices=['regular', 'conv', 'both'])
-    p.add_argument('--storage-root', default=str(ROOT / 'dataset_storage'), dest='storage_root')
+    p.add_argument('--storage-root', default=str(ROOT / 'dataset_storage'),
+                   dest='storage_root')
     p.add_argument('--batch-size', type=int, default=64, dest='batch_size')
     p.add_argument('--train-steps', type=int, default=5, dest='train_steps')
+    p.add_argument('--eval-every', type=int, default=1, dest='eval_every')
     p.add_argument('--seed', type=int, default=0)
 
     g = p.add_argument_group('regular model')
@@ -368,23 +500,27 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument('--regular-layers', type=int, default=2, dest='regular_layers')
     g.add_argument('--regular-logic-family', default='full', choices=['full', 'light'],
                    dest='regular_logic_family')
-    g.add_argument('--regular-architecture', default='softmax', dest='regular_architecture')
+    g.add_argument('--regular-architecture', default='softmax',
+                   dest='regular_architecture')
 
     g = p.add_argument_group('conv model')
-    g.add_argument('--conv-channels', type=int, default=8, dest='conv_channels')
-    g.add_argument('--conv-depth', type=int, default=2, dest='conv_depth')
-    g.add_argument('--conv-kernel-size', type=int, default=3, dest='conv_kernel_size')
-    g.add_argument('--conv-stride', type=int, default=1, dest='conv_stride')
+    g.add_argument('--conv-block-channels', type=int, nargs='+', default=[8],
+                   dest='conv_block_channels')
+    g.add_argument('--conv-block-kernel-sizes', type=int, nargs='+', default=[3],
+                   dest='conv_block_kernel_sizes')
+    g.add_argument('--conv-block-depths', type=int, nargs='+', default=[2],
+                   dest='conv_block_depths')
+    g.add_argument('--conv-block-paddings', type=int, nargs='+', default=[0],
+                   dest='conv_block_paddings')
+    g.add_argument('--conv-block-strides', type=int, nargs='+', default=[1],
+                   dest='conv_block_strides')
     g.add_argument('--pool-size', type=int, default=2, dest='pool_size')
-    g.add_argument('--conv-logic-family', default='full', choices=['full', 'light'],
-                   dest='conv_logic_family')
-    g.add_argument('--conv-architecture', default='softmax', dest='conv_architecture')
-    g.add_argument('--conv-head-neurons', type=int, default=40, dest='conv_head_neurons')
-    g.add_argument('--conv-head-layers', type=int, default=2, dest='conv_head_layers')
-    g.add_argument('--conv-head-logic-family', default='full', choices=['full', 'light'],
-                   dest='conv_head_logic_family')
-    g.add_argument('--conv-head-architecture', default='softmax',
-                   dest='conv_head_architecture')
+    g.add_argument('--pool-stride', type=int, default=2, dest='pool_stride')
+    g.add_argument('--fc-sizes', type=int, nargs='+', default=[40],
+                   dest='fc_sizes')
+    g.add_argument('--logic-family', default='full', choices=['full', 'light'],
+                   dest='logic_family')
+    g.add_argument('--architecture', default='softmax', dest='architecture')
 
     g = p.add_argument_group('optimizer / decoder')
     g.add_argument('--learning-rate', type=float, default=0.01, dest='learning_rate')
@@ -438,20 +574,22 @@ def main(argv=None) -> int:
     train_loader, _, test_loader = load_dataset(data_config)
     class_count = num_classes_of_dataset(args.dataset)
 
-    for name, attr in [('regular-neurons', 'regular_neurons'),
-                       ('conv-head-neurons', 'conv_head_neurons')]:
-        if getattr(args, attr) % class_count != 0:
-            print(f'Error: --{name} must be divisible by class_count ({class_count})')
+    # Validate regular path divisibility
+    if args.model in ('regular', 'both'):
+        if args.regular_neurons % class_count != 0:
+            print(f'Error: --regular-neurons ({args.regular_neurons}) must be '
+                  f'divisible by class_count ({class_count})')
             return 1
 
     print(f'Dataset: {args.dataset}  classes={class_count}  '
-          f'batch={args.batch_size}  steps={args.train_steps}')
+          f'batch={args.batch_size}  steps={args.train_steps}  '
+          f'preset={args.preset}')
 
     if args.model in ('regular', 'both'):
         run_regular_path(args, train_loader, test_loader, class_count)
 
     if args.model in ('conv', 'both'):
-        run_conv_path(args, train_loader, test_loader, class_count)
+        run_deep_conv_path(args, train_loader, test_loader, class_count)
 
     print('\nDone.')
     return 0
@@ -459,13 +597,3 @@ def main(argv=None) -> int:
 
 if __name__ == '__main__':
     raise SystemExit(main())
-
-
-# python scripts/test_mnist_layers.py --model conv \
-#   --conv-logic-family full --conv-architecture softmax \
-#   --conv-head-logic-family light --conv-head-architecture light_sigmoid
-
-# # All-light
-# python scripts/test_mnist_layers.py --model conv \
-#   --conv-logic-family light --conv-architecture light_sigmoid \
-#   --conv-head-logic-family light --conv-head-architecture light_sigmoid

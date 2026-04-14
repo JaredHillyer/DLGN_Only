@@ -1,0 +1,67 @@
+nohup: ignoring input
+Dataset: mnist  classes=10  batch=256  steps=5000  preset=medium
+
+[conv] deep conv DLGN (full/softmax) on MNIST
+  input=(28, 28, 1)
+  block 0: ch=64  k=5  d=3  pad=0  s=1
+  block 1: ch=192  k=3  d=3  pad=1  s=1
+  block 2: ch=576  k=3  d=3  pad=1  s=1
+  pool=2x2 stride=2
+  flatten=5184  fc=[81920, 40960, 20480]
+  sum_tau=28  class_count=10
+  before: soft_loss=2.7137 hard_loss=2.7192 soft_acc=0.0859 hard_acc=0.0859
+  compiling train step (this may take a while) ...
+  compiled in 1699.9s  step_0_loss=2.5391
+  step   100/5000  train_loss=2.4276  soft_loss=2.5080 hard_loss=2.7192 soft_acc=0.0859 hard_acc=0.0859  [36s]
+  step   200/5000  train_loss=1.4576  soft_loss=1.4993 hard_loss=2.7192 soft_acc=0.5664 hard_acc=0.0859  [107s]
+  step   300/5000  train_loss=0.9777  soft_loss=0.8743 hard_loss=2.7192 soft_acc=0.7383 hard_acc=0.0859  [177s]
+  step   400/5000  train_loss=0.6853  soft_loss=0.6171 hard_loss=2.1851 soft_acc=0.8203 hard_acc=0.1445  [248s]
+  step   500/5000  train_loss=0.5239  soft_loss=0.4393 hard_loss=1.1998 soft_acc=0.9062 hard_acc=0.6289  [318s]
+  step   600/5000  train_loss=0.3354  soft_loss=0.3223 hard_loss=0.7426 soft_acc=0.9492 hard_acc=0.7539  [389s]
+  step   700/5000  train_loss=0.3163  soft_loss=0.2432 hard_loss=0.5146 soft_acc=0.9609 hard_acc=0.8672  [460s]
+  step   800/5000  train_loss=0.2274  soft_loss=0.1927 hard_loss=0.3594 soft_acc=0.9688 hard_acc=0.9297  [531s]
+  step   900/5000  train_loss=0.2650  soft_loss=0.1595 hard_loss=0.2603 soft_acc=0.9727 hard_acc=0.9609  [601s]
+  step  1000/5000  train_loss=0.1880  soft_loss=0.1378 hard_loss=0.2204 soft_acc=0.9766 hard_acc=0.9648  [672s]
+  step  1100/5000  train_loss=0.1454  soft_loss=0.1219 hard_loss=0.1655 soft_acc=0.9766 hard_acc=0.9766  [743s]
+  step  1200/5000  train_loss=0.1966  soft_loss=0.1116 hard_loss=0.1369 soft_acc=0.9766 hard_acc=0.9922  [814s]
+  step  1300/5000  train_loss=0.1881  soft_loss=0.0993 hard_loss=0.1266 soft_acc=0.9805 hard_acc=0.9922  [885s]
+  step  1400/5000  train_loss=0.1207  soft_loss=0.0935 hard_loss=0.1200 soft_acc=0.9805 hard_acc=0.9922  [956s]
+  step  1500/5000  train_loss=0.1595  soft_loss=0.0837 hard_loss=0.1122 soft_acc=0.9922 hard_acc=0.9922  [1027s]
+  step  1600/5000  train_loss=0.0822  soft_loss=0.0814 hard_loss=0.1057 soft_acc=0.9805 hard_acc=0.9922  [1098s]
+  step  1700/5000  train_loss=0.0906  soft_loss=0.0770 hard_loss=0.1040 soft_acc=0.9883 hard_acc=0.9961  [1169s]
+  step  1800/5000  train_loss=0.1026  soft_loss=0.0730 hard_loss=0.1000 soft_acc=0.9922 hard_acc=0.9961  [1241s]
+  step  1900/5000  train_loss=0.1051  soft_loss=0.0703 hard_loss=0.0942 soft_acc=0.9883 hard_acc=0.9922  [1312s]
+  step  2000/5000  train_loss=0.1137  soft_loss=0.0686 hard_loss=0.0892 soft_acc=0.9883 hard_acc=0.9922  [1383s]
+  step  2100/5000  train_loss=0.0799  soft_loss=0.0653 hard_loss=0.0810 soft_acc=0.9844 hard_acc=0.9961  [1454s]
+  step  2200/5000  train_loss=0.0845  soft_loss=0.0637 hard_loss=0.0784 soft_acc=0.9883 hard_acc=0.9961  [1525s]
+  step  2300/5000  train_loss=0.0965  soft_loss=0.0602 hard_loss=0.0718 soft_acc=0.9961 hard_acc=1.0000  [1596s]
+  step  2400/5000  train_loss=0.1104  soft_loss=0.0598 hard_loss=0.0733 soft_acc=0.9922 hard_acc=0.9961  [1667s]
+  step  2500/5000  train_loss=0.1090  soft_loss=0.0581 hard_loss=0.0676 soft_acc=0.9922 hard_acc=1.0000  [1738s]
+  step  2600/5000  train_loss=0.0859  soft_loss=0.0567 hard_loss=0.0651 soft_acc=0.9961 hard_acc=1.0000  [1810s]
+  step  2700/5000  train_loss=0.0706  soft_loss=0.0557 hard_loss=0.0625 soft_acc=0.9961 hard_acc=1.0000  [1881s]
+  step  2800/5000  train_loss=0.1116  soft_loss=0.0547 hard_loss=0.0623 soft_acc=0.9961 hard_acc=0.9961  [1952s]
+  step  2900/5000  train_loss=0.1199  soft_loss=0.0536 hard_loss=0.0609 soft_acc=0.9922 hard_acc=1.0000  [2023s]
+  step  3000/5000  train_loss=0.1225  soft_loss=0.0543 hard_loss=0.0608 soft_acc=0.9922 hard_acc=1.0000  [2095s]
+  step  3100/5000  train_loss=0.0800  soft_loss=0.0529 hard_loss=0.0602 soft_acc=0.9961 hard_acc=0.9961  [2166s]
+  step  3200/5000  train_loss=0.0927  soft_loss=0.0509 hard_loss=0.0569 soft_acc=0.9922 hard_acc=1.0000  [2238s]
+  step  3300/5000  train_loss=0.0670  soft_loss=0.0504 hard_loss=0.0559 soft_acc=0.9922 hard_acc=1.0000  [2309s]
+  step  3400/5000  train_loss=0.0705  soft_loss=0.0502 hard_loss=0.0564 soft_acc=0.9961 hard_acc=0.9961  [2381s]
+  step  3500/5000  train_loss=0.0894  soft_loss=0.0493 hard_loss=0.0562 soft_acc=0.9961 hard_acc=1.0000  [2452s]
+  step  3600/5000  train_loss=0.0660  soft_loss=0.0473 hard_loss=0.0524 soft_acc=0.9961 hard_acc=0.9961  [2523s]
+  step  3700/5000  train_loss=0.0773  soft_loss=0.0474 hard_loss=0.0517 soft_acc=0.9961 hard_acc=1.0000  [2595s]
+  step  3800/5000  train_loss=0.0911  soft_loss=0.0475 hard_loss=0.0496 soft_acc=0.9961 hard_acc=1.0000  [2666s]
+  step  3900/5000  train_loss=0.0434  soft_loss=0.0450 hard_loss=0.0474 soft_acc=0.9961 hard_acc=0.9961  [2738s]
+  step  4000/5000  train_loss=0.0928  soft_loss=0.0458 hard_loss=0.0473 soft_acc=0.9961 hard_acc=1.0000  [2810s]
+  step  4100/5000  train_loss=0.1232  soft_loss=0.0447 hard_loss=0.0485 soft_acc=0.9961 hard_acc=0.9961  [2881s]
+  step  4200/5000  train_loss=0.0768  soft_loss=0.0454 hard_loss=0.0486 soft_acc=0.9922 hard_acc=0.9961  [2953s]
+  step  4300/5000  train_loss=0.0753  soft_loss=0.0450 hard_loss=0.0487 soft_acc=0.9922 hard_acc=1.0000  [3024s]
+  step  4400/5000  train_loss=0.0531  soft_loss=0.0457 hard_loss=0.0478 soft_acc=0.9961 hard_acc=0.9961  [3096s]
+  step  4500/5000  train_loss=0.0773  soft_loss=0.0435 hard_loss=0.0462 soft_acc=0.9961 hard_acc=0.9961  [3167s]
+  step  4600/5000  train_loss=0.0656  soft_loss=0.0431 hard_loss=0.0480 soft_acc=0.9922 hard_acc=0.9922  [3239s]
+  step  4700/5000  train_loss=0.0850  soft_loss=0.0424 hard_loss=0.0468 soft_acc=0.9961 hard_acc=0.9961  [3311s]
+  step  4800/5000  train_loss=0.0617  soft_loss=0.0408 hard_loss=0.0443 soft_acc=0.9961 hard_acc=0.9961  [3382s]
+  step  4900/5000  train_loss=0.0906  soft_loss=0.0418 hard_loss=0.0436 soft_acc=0.9961 hard_acc=0.9961  [3455s]
+  step  5000/5000  train_loss=0.0769  soft_loss=0.0410 hard_loss=0.0421 soft_acc=0.9961 hard_acc=0.9961  [3526s]
+  total time: 5262s  (compile 1699.9s)
+
+Done.

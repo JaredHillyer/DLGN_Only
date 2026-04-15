@@ -1,0 +1,837 @@
+mkdir -p logs
+
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset small_cifar  | tee logs/small_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset medium_cifar | tee logs/medium_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset base_cifar   | tee logs/base_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset large_cifar  | tee logs/large_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset giant_cifar  | tee logs/giant_cifar.log
+E0415 07:11:17.074801    9625 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 07:11:17.155413    9625 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+Dataset: cifar10  classes=10  batch=128  steps=5000  preset=small_cifar  threshold_bits=2
+
+[conv] deep conv DLGN (full/softmax) on cifar10
+  input=(32, 32, 6)  threshold_bits=2
+  block 0: ch=32  k=3  d=3  pad=1  s=1
+  block 1: ch=128  k=3  d=3  pad=1  s=1
+  block 2: ch=512  k=3  d=3  pad=1  s=1
+  block 3: ch=1024  k=3  d=3  pad=1  s=1
+  pool=2x2 stride=2
+  flatten=4096  fc=[40960, 20480, 10240]
+  sum_tau=20  class_count=10
+  before: soft_loss=2.3989 hard_loss=2.4013 soft_acc=0.1328 hard_acc=0.1328
+  compiling train step (this may take a while) ...
+^CTraceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 750, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 743, in main
+    run_deep_conv_path(args, train_loader, test_loader, class_count)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 395, in run_deep_conv_path
+    params, opt_state, key, loss = train_step(
+                                   ~~~~~~~~~~^
+        params, opt_state, batch_images, batch_y, key,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/traceback_util.py", line 180, in reraise_with_filtered_traceback
+    return fun(*args, **kwargs)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/pjit.py", line 268, in cache_miss
+    executable, pgle_profiler, const_args) = _python_pjit_helper(
+                                             ~~~~~~~~~~~~~~~~~~~^
+        fun, jit_info, *args, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/pjit.py", line 147, in _python_pjit_helper
+    out_flat, compiled, profiler, const_args = _pjit_call_impl_python(
+                                               ~~~~~~~~~~~~~~~~~~~~~~^
+        *args_flat, **p.params)
+        ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/pjit.py", line 1748, in _pjit_call_impl_python
+    computation = _resolve_and_lower(
+        args, jaxpr=jaxpr, in_shardings=in_shardings,
+    ...<6 lines>...
+        compiler_options_kvs=compiler_options_kvs,
+    )
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/pjit.py", line 1712, in _resolve_and_lower
+    return _pjit_lower(
+        jaxpr, in_shardings, out_shardings, in_layouts, out_layouts,
+    ...<2 lines>...
+        lowering_parameters=lowering_parameters,
+        pgle_profiler=pgle_profiler)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/pjit.py", line 1854, in _pjit_lower
+    return pxla.lower_sharding_computation(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        jaxpr, 'jit', name, in_shardings, out_shardings,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+        lowering_parameters=lowering_parameters,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        pgle_profiler=pgle_profiler)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/profiler.py", line 364, in wrapper
+    return func(*args, **kwargs)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/interpreters/pxla.py", line 2421, in lower_sharding_computation
+    nreps, tuple_args, shape_poly_state) = _cached_lowering_to_hlo(
+                                           ~~~~~~~~~~~~~~~~~~~~~~~^
+        closed_jaxpr, module_name, backend,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+        lowering_parameters=lowering_parameters,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        abstract_mesh=abstract_mesh)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/interpreters/pxla.py", line 1986, in _cached_lowering_to_hlo
+    lowering_result = mlir.lower_jaxpr_to_module(
+        module_name,
+    ...<19 lines>...
+        propagated_out_mem_kinds=propagated_out_mem_kinds,
+        lowering_parameters=lowering_parameters)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/interpreters/mlir.py", line 1375, in lower_jaxpr_to_module
+    lower_jaxpr_to_fun(
+    ~~~~~~~~~~~~~~~~~~^
+        ctx, module_name, jaxpr, ordered_effects,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<13 lines>...
+        result_layouts=out_layouts,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        propagated_out_mem_kinds=propagated_out_mem_kinds)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/interpreters/mlir.py", line 1925, in lower_jaxpr_to_fun
+    out_vals, tokens_out = jaxpr_subcomp(
+                           ~~~~~~~~~~~~~^
+        ctx, jaxpr.jaxpr, name_stack, tokens_in,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        consts_for_constvars, *args, dim_var_values=dim_var_values,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        const_lowering=const_lowering)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/interpreters/mlir.py", line 2133, in jaxpr_subcomp
+    in_nodes = tuple(map(read, eqn.invars))
+                     ~~~^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/interpreters/mlir.py", line 2085, in read
+    c = cached_ir_consts.get(h)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/interpreters/mlir.py", line 2050, in __eq__
+    def __eq__(self, other):
+    
+KeyboardInterrupt
+^CException ignored in atexit callback <function clean_up at 0x7d0b4ce416c0>:
+Traceback (most recent call last):
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/api.py", line 3172, in clean_up
+    clear_backends()
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/api.py", line 3164, in clear_backends
+    util.clear_all_caches()
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/util.py", line 330, in clear_all_caches
+    cache.cache_clear()
+KeyboardInterrupt: 
+^C^C^C
+^CTraceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 29, in <module>
+    import jax
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/__init__.py", line 87, in <module>
+    from jax._src.ad_checkpoint import checkpoint_wrapper as checkpoint  # noqa: F401
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/ad_checkpoint.py", line 40, in <module>
+    from jax._src.lax import lax as lax_internal
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/lax/__init__.py", line 313, in <module>
+    from jax._src.lax.ann import (
+      approx_top_k_p as approx_top_k_p
+    )
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1322, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 1262, in _find_spec
+  File "<frozen importlib._bootstrap_external>", line 1560, in find_spec
+  File "<frozen importlib._bootstrap_external>", line 1534, in _get_spec
+  File "<frozen importlib._bootstrap_external>", line 1625, in find_spec
+KeyboardInterrupt
+
+^CTraceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 750, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 723, in main
+    train_loader, _, test_loader = load_dataset(data_config)
+                                   ~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/data/loaders.py", line 221, in load_dataset
+    from dlgn.data.cifar_threshold import load_cifar_threshold
+  File "/home/corp3521/DLGN_Only/dlgn/data/cifar_threshold.py", line 11, in <module>
+    import torchvision
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/__init__.py", line 10, in <module>
+    from torchvision import _meta_registrations, datasets, io, models, ops, transforms, utils  # usort:skip
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/models/__init__.py", line 2, in <module>
+    from .convnext import *
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/models/convnext.py", line 9, in <module>
+    from ..ops.misc import Conv2dNormActivation, Permute
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/ops/__init__.py", line 23, in <module>
+    from .poolers import MultiScaleRoIAlign
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/ops/poolers.py", line 10, in <module>
+    from .roi_align import roi_align
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/ops/roi_align.py", line 7, in <module>
+    from torch._dynamo.utils import is_compile_supported
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torch/_dynamo/__init__.py", line 13, in <module>
+    from . import (
+    ...<6 lines>...
+    )
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torch/_dynamo/aot_compile.py", line 14, in <module>
+    from torch._dynamo.convert_frame import GraphRuntimeEnv
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torch/_dynamo/convert_frame.py", line 60, in <module>
+    from torch._dynamo.symbolic_convert import TensorifyState
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torch/_dynamo/symbolic_convert.py", line 53, in <module>
+    from torch._dynamo.exc import ObservedException, TensorifyScalarRestartAnalysis
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torch/_dynamo/exc.py", line 44, in <module>
+    from .utils import counters
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torch/_dynamo/utils.py", line 69, in <module>
+    import torch.fx.experimental.symbolic_shapes
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torch/fx/experimental/symbolic_shapes.py", line 3, in <module>
+    import sympy
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/sympy/__init__.py", line 31, in <module>
+    from sympy.core.cache import lazy_function
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/sympy/core/__init__.py", line 4, in <module>
+    from .sympify import sympify, SympifyError
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/sympy/core/sympify.py", line 646, in <module>
+    from .basic import Basic
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+  File "<frozen importlib._bootstrap_external>", line 1156, in get_code
+  File "<frozen importlib._bootstrap_external>", line 785, in _compile_bytecode
+KeyboardInterrupt
+
+^CTraceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 32, in <module>
+    import optax
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/optax/__init__.py", line 23, in <module>
+    from optax import contrib
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/optax/contrib/__init__.py", line 19, in <module>
+    from optax.contrib._acprop import acprop
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/optax/contrib/_acprop.py", line 27, in <module>
+    from optax._src import combine
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/optax/_src/combine.py", line 17, in <module>
+    from optax.transforms import _combining
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/optax/transforms/__init__.py", line 19, in <module>
+    from optax.transforms._accumulation import ema
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/optax/transforms/_accumulation.py", line 27, in <module>
+    from optax._src import utils
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/optax/_src/utils.py", line 27, in <module>
+    import jax.scipy.stats.norm as multivariate_normal
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/scipy/stats/__init__.py", line 18, in <module>
+    from jax.scipy.stats import bernoulli as bernoulli
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/scipy/stats/bernoulli.py", line 18, in <module>
+    from jax._src.scipy.stats.bernoulli import (
+    ...<4 lines>...
+    )
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/scipy/stats/bernoulli.py", line 21, in <module>
+    from jax._src.scipy.special import xlogy, xlog1py
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/scipy/special.py", line 1214, in <module>
+    _norm_logpdf_constant = np.log(np.sqrt(2 * np.pi))
+                                   ~~~~~~~^^^^^^^^^^^
+KeyboardInterrupt
+
+^CTraceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 750, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 705, in main
+    seed_all(args.seed, seed_torch=True)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/utils/seeding.py", line 19, in seed_all
+    import torch
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torch/__init__.py", line 431, in <module>
+    from torch._C import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 463, in _lock_unlock_module
+KeyboardInterrupt
+
+(jax313) corp3521@yoga:~/DLGN_Only$ ^C
+(jax313) corp3521@yoga:~/DLGN_Only$ git pull
+remote: Enumerating objects: 14, done.
+remote: Counting objects: 100% (14/14), done.
+remote: Compressing objects: 100% (1/1), done.
+remote: Total 8 (delta 6), reused 8 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (8/8), 1.17 KiB | 31.00 KiB/s, done.
+From https://github.com/JaredHillyer/DLGN_Only
+   a3d5920..7707f4d  mnist      -> origin/mnist
+Updating a3d5920..7707f4d
+Fast-forward
+ dlgn/models/conv.py          | 58 +++++++++++++++++++++++++++++++++++++++++++---------------
+ scripts/test_mnist_layers.py | 10 ++++++++++
+ yo.txt                       |  0
+ 3 files changed, 53 insertions(+), 15 deletions(-)
+ create mode 100644 yo.txt
+(jax313) corp3521@yoga:~/DLGN_Only$ python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset small_cifar  | tee logs/small_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset medium_cifar | tee logs/medium_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset base_cifar   | tee logs/base_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset large_cifar  | tee logs/large_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset giant_cifar  | tee logs/giant_cifar.log
+E0415 08:00:40.910401   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:00:40.991049   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:00:41.071616   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+Dataset: cifar10  classes=10  batch=128  steps=5000  preset=small_cifar  threshold_bits=2
+
+[conv] deep conv DLGN (full/softmax) on cifar10
+  input=(32, 32, 6)  threshold_bits=2
+  block 0: ch=32  k=3  d=3  pad=1  s=1
+  block 1: ch=128  k=3  d=3  pad=1  s=1
+  block 2: ch=512  k=3  d=3  pad=1  s=1
+  block 3: ch=1024  k=3  d=3  pad=1  s=1
+  pool=2x2 stride=2
+  flatten=4096  fc=[40960, 20480, 10240]
+  sum_tau=20  class_count=10
+  before: soft_loss=2.3989 hard_loss=2.4013 soft_acc=0.1328 hard_acc=0.1328
+  compiling train step (this may take a while) ...
+E0415 08:07:22.352954   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:07:22.433422   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:07:22.514092   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:10:41.064483   33534 slow_operation_alarm.cc:73] 
+********************************
+[Compiling module jit_step for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+E0415 08:11:22.261296   33361 slow_operation_alarm.cc:140] The operation took 2m41.196883707s
+
+********************************
+[Compiling module jit_step for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+  compiled in 648.3s  step_0_loss=2.3878
+  step   100/5000  train_loss=2.2369  soft_loss=2.2358 hard_loss=2.4013 soft_acc=0.1719 hard_acc=0.1328  [19s]
+  step   200/5000  train_loss=2.1086  soft_loss=2.0119 hard_loss=2.3971 soft_acc=0.2656 hard_acc=0.1328  [39s]
+  step   300/5000  train_loss=1.8506  soft_loss=1.8704 hard_loss=2.0873 soft_acc=0.3203 hard_acc=0.2812  [59s]
+^CTraceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 753, in main
+    run_deep_conv_path(args, train_loader, test_loader, class_count)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 417, in run_deep_conv_path
+    params, opt_state, key, loss = train_step(
+                                   ~~~~~~~~~~^
+        params, opt_state, batch_images, batch_y, key,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "<string>", line 1, in <lambda>
+KeyboardInterrupt
+
+^CTraceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 753, in main
+    run_deep_conv_path(args, train_loader, test_loader, class_count)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 310, in run_deep_conv_path
+    cp, cw = init_conv_gate_layer(
+             ~~~~~~~~~~~~~~~~~~~~^
+        subkey,
+        ^^^^^^^
+    ...<5 lines>...
+        logic_family=logic_family,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 251, in init_conv_gate_layer
+    return _init_tree_kernels(key, patch_dim, out_channels, depth,
+                              connection_type, logic_family)
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 55, in _init_tree_kernels
+    logits, wires = init_gate_layer(
+                    ~~~~~~~~~~~~~~~^
+        layer_key, layer_in, layer_out,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        connection_type, logic_family,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/corp3521/DLGN_Only/dlgn/models/initialization.py", line 101, in init_gate_layer
+    gate_params = init_full_gates(out_dim)
+  File "/home/corp3521/DLGN_Only/dlgn/models/initialization.py", line 67, in init_full_gates
+    return gates.at[:, pass_through_gate].set(default_pass_value)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/array_methods.py", line 854, in set
+    return scatter._scatter_update(
+           ~~~~~~~~~~~~~~~~~~~~~~~^
+        self.array, self.index, values, lax_slicing.scatter,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        indices_are_sorted=indices_are_sorted, unique_indices=unique_indices,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        mode=mode, out_sharding=out_sharding,  # type: ignore
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        normalize_indices=wrap_negative_indices)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/ops/scatter.py", line 92, in _scatter_update
+    return internal_scatter(x, y, dynamic_idx)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/ops/scatter.py", line 124, in _scatter_impl
+    x, y = promote_dtypes(x, y)
+           ~~~~~~~~~~~~~~^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/util.py", line 94, in promote_dtypes
+    return [lax._convert_element_type(x, to_dtype, weak_type) for x in args]
+            ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/lax/lax.py", line 1743, in _convert_element_type
+    return convert_element_type_p.bind(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        operand, new_dtype=new_dtype, weak_type=bool(weak_type),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        sharding=sharding)
+        ^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/core.py", line 634, in bind
+    return self._true_bind(*args, **params)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/core.py", line 650, in _true_bind
+    return self.bind_with_trace(prev_trace, args, params)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/lax/lax.py", line 4988, in _convert_element_type_bind_with_trace
+    operand = core.Primitive.bind_with_trace(convert_element_type_p, trace, args, params)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/core.py", line 662, in bind_with_trace
+    return trace.process_primitive(self, args, params)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/core.py", line 1189, in process_primitive
+    return primitive.impl(*args, **params)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/dispatch.py", line 90, in apply_primitive
+    outs = fun(*args)
+KeyboardInterrupt
+Exception ignored on flushing sys.stdout:
+BrokenPipeError: [Errno 32] Broken pipe
+^C
+^CTraceback (most recent call last):
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/numpy/__init__.py", line 454, in <module>
+    from . import lib
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/numpy/lib/__init__.py", line 18, in <module>
+    from . import (
+    ...<23 lines>...
+    )
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/numpy/lib/_npyio_impl.py", line 26, in <module>
+    from ._iotools import (
+    ...<11 lines>...
+    )
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/numpy/lib/_iotools.py", line 439, in <module>
+    class ConversionWarning(UserWarning):
+    ...<9 lines>...
+        pass
+KeyboardInterrupt
+Critical nanobind error: nanobind::detail::exception_new(): creation failed!
+^C^C^CTraceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 733, in main
+    train_loader, _, test_loader = load_dataset(data_config)
+                                   ~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/data/loaders.py", line 222, in load_dataset
+    return load_cifar_threshold(
+        dataset=dataset,
+    ...<5 lines>...
+        n_thresholds=config.get('threshold_bits'),
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/data/cifar_threshold.py", line 92, in load_cifar_threshold
+    test_set = torchvision.datasets.CIFAR10(
+        data_root, train=False, download=True, transform=transforms
+    )
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/datasets/cifar.py", line 66, in __init__
+    self.download()
+    ~~~~~~~~~~~~~^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/datasets/cifar.py", line 137, in download
+    if self._check_integrity():
+       ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/datasets/cifar.py", line 132, in _check_integrity
+    if not check_integrity(fpath, md5):
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/datasets/utils.py", line 55, in check_integrity
+    return check_md5(fpath, md5)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/datasets/utils.py", line 47, in check_md5
+    return md5 == calculate_md5(fpath, **kwargs)
+                  ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torchvision/datasets/utils.py", line 42, in calculate_md5
+    md5.update(chunk)
+    ~~~~~~~~~~^^^^^^^
+KeyboardInterrupt
+^C
+^CTraceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 715, in main
+    seed_all(args.seed, seed_torch=True)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/utils/seeding.py", line 19, in seed_all
+    import torch
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/torch/__init__.py", line 431, in <module>
+    from torch._C import *  # noqa: F403
+    ^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 463, in _lock_unlock_module
+KeyboardInterrupt
+
+(jax313) corp3521@yoga:~/DLGN_Only$ mkdir -p logs
+
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset small_cifar  | tee logs/small_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset medium_cifar | tee logs/medium_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset base_cifar   | tee logs/base_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset large_cifar  | tee logs/large_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset giant_cifar  | tee logs/giant_cifar.log
+E0415 08:13:52.287467   40969 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:13:52.367584   40969 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:13:52.448453   40969 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+Dataset: cifar10  classes=10  batch=128  steps=5000  preset=small_cifar  threshold_bits=2
+
+[conv] deep conv DLGN (full/softmax) on cifar10
+  input=(32, 32, 6)  threshold_bits=2
+  block 0: ch=32  k=3  d=3  pad=1  s=1
+  block 1: ch=128  k=3  d=3  pad=1  s=1
+  block 2: ch=512  k=3  d=3  pad=1  s=1
+  block 3: ch=1024  k=3  d=3  pad=1  s=1
+  pool=2x2 stride=2
+  flatten=4096  fc=[40960, 20480, 10240]
+  sum_tau=20  class_count=10
+  before: soft_loss=2.3989 hard_loss=2.4013 soft_acc=0.1328 hard_acc=0.1328
+  compiling train step (this may take a while) ...
+E0415 08:20:38.359520   40969 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:20:38.439803   40969 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:20:38.520527   40969 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:23:58.088670   41141 slow_operation_alarm.cc:73] 
+********************************
+[Compiling module jit_step for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+E0415 08:24:39.118430   40969 slow_operation_alarm.cc:140] The operation took 2m41.029824791s
+
+********************************
+[Compiling module jit_step for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+  compiled in 653.8s  step_0_loss=2.3878
+  step   100/5000  train_loss=2.2370  soft_loss=2.2358 hard_loss=2.4013 soft_acc=0.1719 hard_acc=0.1328  [19s]
+  step   200/5000  train_loss=2.1080  soft_loss=2.0116 hard_loss=2.3971 soft_acc=0.2656 hard_acc=0.1328  [39s]
+  step   300/5000  train_loss=1.8513  soft_loss=1.8712 hard_loss=2.0882 soft_acc=0.3203 hard_acc=0.2969  [58s]
+  step   400/5000  train_loss=1.7464  soft_loss=1.7665 hard_loss=1.9962 soft_acc=0.3203 hard_acc=0.2578  [78s]
+  step   500/5000  train_loss=1.6767  soft_loss=1.7083 hard_loss=1.9498 soft_acc=0.3750 hard_acc=0.2891  [98s]
+  step   600/5000  train_loss=1.6304  soft_loss=1.6485 hard_loss=1.8388 soft_acc=0.3984 hard_acc=0.3359  [118s]
+  step   700/5000  train_loss=1.6997  soft_loss=1.5895 hard_loss=1.7166 soft_acc=0.4688 hard_acc=0.3906  [139s]
+  step   800/5000  train_loss=1.5377  soft_loss=1.5567 hard_loss=1.6872 soft_acc=0.4688 hard_acc=0.4062  [159s]
+  step   900/5000  train_loss=1.6366  soft_loss=1.5270 hard_loss=1.6208 soft_acc=0.4531 hard_acc=0.4297  [179s]
+  step  1000/5000  train_loss=1.4134  soft_loss=1.5003 hard_loss=1.6019 soft_acc=0.4844 hard_acc=0.4219  [199s]
+  step  1100/5000  train_loss=1.4569  soft_loss=1.4706 hard_loss=1.5304 soft_acc=0.4922 hard_acc=0.4844  [219s]
+  step  1200/5000  train_loss=1.4956  soft_loss=1.4597 hard_loss=1.5495 soft_acc=0.5000 hard_acc=0.5000  [239s]
+  step  1300/5000  train_loss=1.4044  soft_loss=1.4407 hard_loss=1.5143 soft_acc=0.4922 hard_acc=0.5078  [259s]
+  step  1400/5000  train_loss=1.4961  soft_loss=1.4150 hard_loss=1.4968 soft_acc=0.5078 hard_acc=0.4922  [280s]
+  step  1500/5000  train_loss=1.4740  soft_loss=1.3984 hard_loss=1.5085 soft_acc=0.5234 hard_acc=0.5391  [300s]
+  step  1600/5000  train_loss=1.5447  soft_loss=1.3933 hard_loss=1.4984 soft_acc=0.5312 hard_acc=0.4922  [320s]
+  step  1700/5000  train_loss=1.3425  soft_loss=1.3705 hard_loss=1.4851 soft_acc=0.5469 hard_acc=0.5156  [340s]
+  step  1800/5000  train_loss=1.2992  soft_loss=1.3567 hard_loss=1.4604 soft_acc=0.5469 hard_acc=0.5234  [361s]
+  step  1900/5000  train_loss=1.4757  soft_loss=1.3515 hard_loss=1.4221 soft_acc=0.5859 hard_acc=0.5000  [381s]
+  step  2000/5000  train_loss=1.4902  soft_loss=1.3634 hard_loss=1.4738 soft_acc=0.5078 hard_acc=0.4922  [401s]
+  step  2100/5000  train_loss=1.3182  soft_loss=1.3268 hard_loss=1.4310 soft_acc=0.5625 hard_acc=0.5000  [421s]
+  step  2200/5000  train_loss=1.2876  soft_loss=1.3337 hard_loss=1.4212 soft_acc=0.5312 hard_acc=0.5156  [441s]
+  step  2300/5000  train_loss=1.3449  soft_loss=1.3252 hard_loss=1.3955 soft_acc=0.5234 hard_acc=0.5000  [461s]
+  step  2400/5000  train_loss=1.3131  soft_loss=1.3155 hard_loss=1.3944 soft_acc=0.5547 hard_acc=0.5156  [481s]
+  step  2500/5000  train_loss=1.2970  soft_loss=1.2907 hard_loss=1.3652 soft_acc=0.5469 hard_acc=0.5312  [501s]
+  step  2600/5000  train_loss=1.3168  soft_loss=1.2871 hard_loss=1.3615 soft_acc=0.5625 hard_acc=0.5156  [521s]
+  step  2700/5000  train_loss=1.3017  soft_loss=1.2910 hard_loss=1.3658 soft_acc=0.5625 hard_acc=0.5391  [541s]
+  step  2800/5000  train_loss=1.4069  soft_loss=1.2900 hard_loss=1.3487 soft_acc=0.5547 hard_acc=0.5391  [562s]
+  step  2900/5000  train_loss=1.2886  soft_loss=1.2790 hard_loss=1.3387 soft_acc=0.5547 hard_acc=0.5547  [582s]
+  step  3000/5000  train_loss=1.2787  soft_loss=1.2831 hard_loss=1.3431 soft_acc=0.5547 hard_acc=0.5391  [602s]
+  step  3100/5000  train_loss=1.3840  soft_loss=1.2954 hard_loss=1.3439 soft_acc=0.5703 hard_acc=0.5547  [622s]
+  step  3200/5000  train_loss=1.2664  soft_loss=1.2715 hard_loss=1.3371 soft_acc=0.5625 hard_acc=0.5625  [642s]
+  step  3300/5000  train_loss=1.2918  soft_loss=1.2808 hard_loss=1.3794 soft_acc=0.5625 hard_acc=0.5078  [662s]
+  step  3400/5000  train_loss=1.1484  soft_loss=1.2705 hard_loss=1.3394 soft_acc=0.5859 hard_acc=0.5625  [682s]
+  step  3500/5000  train_loss=1.2540  soft_loss=1.2777 hard_loss=1.3254 soft_acc=0.5625 hard_acc=0.5625  [703s]
+  step  3600/5000  train_loss=1.1432  soft_loss=1.2733 hard_loss=1.3583 soft_acc=0.5781 hard_acc=0.5312  [723s]
+  step  3700/5000  train_loss=1.2173  soft_loss=1.2646 hard_loss=1.3165 soft_acc=0.5859 hard_acc=0.5625  [743s]
+  step  3800/5000  train_loss=1.3303  soft_loss=1.2683 hard_loss=1.3340 soft_acc=0.5703 hard_acc=0.5625  [763s]
+  step  3900/5000  train_loss=1.3314  soft_loss=1.2593 hard_loss=1.3357 soft_acc=0.5781 hard_acc=0.4922  [783s]
+  step  4000/5000  train_loss=1.2479  soft_loss=1.2583 hard_loss=1.3315 soft_acc=0.5859 hard_acc=0.5234  [803s]
+  step  4100/5000  train_loss=1.2867  soft_loss=1.2605 hard_loss=1.3227 soft_acc=0.5781 hard_acc=0.5469  [824s]
+  step  4200/5000  train_loss=1.2491  soft_loss=1.2636 hard_loss=1.3370 soft_acc=0.5938 hard_acc=0.5781  [844s]
+  step  4300/5000  train_loss=1.2324  soft_loss=1.2473 hard_loss=1.3114 soft_acc=0.5938 hard_acc=0.5547  [864s]
+  step  4400/5000  train_loss=1.1692  soft_loss=1.2449 hard_loss=1.3298 soft_acc=0.6016 hard_acc=0.5469  [884s]
+  step  4500/5000  train_loss=1.2146  soft_loss=1.2487 hard_loss=1.3099 soft_acc=0.5938 hard_acc=0.5469  [904s]
+  step  4600/5000  train_loss=1.3044  soft_loss=1.2341 hard_loss=1.3083 soft_acc=0.6016 hard_acc=0.5625  [925s]
+  step  4700/5000  train_loss=1.2097  soft_loss=1.2476 hard_loss=1.2985 soft_acc=0.6094 hard_acc=0.5625  [945s]
+  step  4800/5000  train_loss=1.2111  soft_loss=1.2358 hard_loss=1.2800 soft_acc=0.5781 hard_acc=0.5703  [965s]
+  step  4900/5000  train_loss=1.3173  soft_loss=1.2327 hard_loss=1.2840 soft_acc=0.6094 hard_acc=0.5625  [985s]
+  step  5000/5000  train_loss=1.0595  soft_loss=1.2387 hard_loss=1.3015 soft_acc=0.6094 hard_acc=0.5703  [1005s]
+  total time: 1660s  (compile 653.8s)
+
+Done.
+W0415 08:42:43.739352   55374 bfc_allocator.cc:501] Allocator (GPU_0_bfc) ran out of memory trying to allocate 8.00GiB (rounded to 8589934592)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0415 08:42:43.757514   55374 bfc_allocator.cc:512] *_*****************************************************************_________________________________
+E0415 08:42:43.758112   55374 pjrt_stream_executor_client.cc:3314] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 8589934592 bytes. [tf-allocator-allocation-error='']
+Dataset: cifar10  classes=10  batch=128  steps=5000  preset=medium_cifar  threshold_bits=2
+Traceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 753, in main
+    run_deep_conv_path(args, train_loader, test_loader, class_count)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 332, in run_deep_conv_path
+    x_probe = run_conv_gate_layer(
+        conv_params_list[i], conv_wires_list[i], x_probe, False, probe_key,
+        kernel_size=ks, stride=st,
+        architecture=architecture, logic_family=logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 297, in run_conv_gate_layer
+    out = _run_tree_kernels(
+        params, wires, flat, training, key,
+        architecture, gumb_tau, dirichlet_concentration, logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 139, in _run_tree_kernels
+    return jax.vmap(apply_all_kernels)(flat)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 117, in apply_all_kernels
+    z = jax.vmap(
+    ...<2 lines>...
+        )
+    )(
+        layer_params[0],
+    ...<2 lines>...
+        layer_keys[:, 0, :],
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 118, in <lambda>
+    lambda logits, wire_a, wire_b, layer_key: run_one_kernel(
+                                              ~~~~~~~~~~~~~~^
+        logits, wire_a, wire_b, patch_flat, layer_key,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 108, in run_one_kernel
+    return run_layer(
+        logits,
+    ...<3 lines>...
+        dirichlet_concentration, logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/network.py", line 42, in run_layer
+    return bin_op_s(a, b, gate_weights)
+  File "/home/corp3521/DLGN_Only/dlgn/models/gates.py", line 86, in bin_op_s
+    return jnp.sum(bin_op_all_combinations(a, b) * gate_weights, axis=-1)
+                   ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/models/gates.py", line 61, in bin_op_all_combinations
+    return jnp.stack(
+           ~~~~~~~~~^
+        [
+        ^
+    ...<17 lines>...
+        axis=-1,
+        ^^^^^^^^
+    )
+    ^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py", line 4429, in stack
+    return concatenate(new_arrays, axis=axis, dtype=dtype)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py", line 4600, in concatenate
+    arrays_out = [lax.concatenate(arrays_out[i:i+k], axis)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                  for i in range(0, len(arrays_out), k)]
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jaxlib._jax.XlaRuntimeError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 8589934592 bytes.
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+W0415 08:44:29.640185   56207 bfc_allocator.cc:501] Allocator (GPU_0_bfc) ran out of memory trying to allocate 1.00GiB (rounded to 1073741824)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0415 08:44:29.674790   56207 bfc_allocator.cc:512] *____**********************************************************************************************_
+E0415 08:44:29.675969   56207 pjrt_stream_executor_client.cc:3314] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 1073741824 bytes. [tf-allocator-allocation-error='']
+Dataset: cifar10  classes=10  batch=128  steps=5000  preset=base_cifar  threshold_bits=5
+Traceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 753, in main
+    run_deep_conv_path(args, train_loader, test_loader, class_count)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 332, in run_deep_conv_path
+    x_probe = run_conv_gate_layer(
+        conv_params_list[i], conv_wires_list[i], x_probe, False, probe_key,
+        kernel_size=ks, stride=st,
+        architecture=architecture, logic_family=logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 297, in run_conv_gate_layer
+    out = _run_tree_kernels(
+        params, wires, flat, training, key,
+        architecture, gumb_tau, dirichlet_concentration, logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 139, in _run_tree_kernels
+    return jax.vmap(apply_all_kernels)(flat)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 117, in apply_all_kernels
+    z = jax.vmap(
+    ...<2 lines>...
+        )
+    )(
+        layer_params[0],
+    ...<2 lines>...
+        layer_keys[:, 0, :],
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 118, in <lambda>
+    lambda logits, wire_a, wire_b, layer_key: run_one_kernel(
+                                              ~~~~~~~~~~~~~~^
+        logits, wire_a, wire_b, patch_flat, layer_key,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 108, in run_one_kernel
+    return run_layer(
+        logits,
+    ...<3 lines>...
+        dirichlet_concentration, logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/network.py", line 42, in run_layer
+    return bin_op_s(a, b, gate_weights)
+  File "/home/corp3521/DLGN_Only/dlgn/models/gates.py", line 86, in bin_op_s
+    return jnp.sum(bin_op_all_combinations(a, b) * gate_weights, axis=-1)
+                   ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/models/gates.py", line 61, in bin_op_all_combinations
+    return jnp.stack(
+           ~~~~~~~~~^
+        [
+        ^
+    ...<17 lines>...
+        axis=-1,
+        ^^^^^^^^
+    )
+    ^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py", line 4428, in stack
+    new_arrays.append(expand_dims(a, axis))
+                      ~~~~~~~~~~~^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/lax_numpy.py", line 2382, in expand_dims
+    return lax.expand_dims(a, axis)
+           ~~~~~~~~~~~~~~~^^^^^^^^^
+ValueError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 1073741824 bytes.
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+W0415 08:47:46.011189   57395 bfc_allocator.cc:501] Allocator (GPU_0_bfc) ran out of memory trying to allocate 2.00GiB (rounded to 2147483648)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0415 08:47:46.079575   57395 bfc_allocator.cc:512] **_______**************************************************************************************_____
+E0415 08:47:46.081920   57395 pjrt_stream_executor_client.cc:3314] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 2147483648 bytes. [tf-allocator-allocation-error='']
+Dataset: cifar10  classes=10  batch=128  steps=5000  preset=large_cifar  threshold_bits=5
+Traceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 753, in main
+    run_deep_conv_path(args, train_loader, test_loader, class_count)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 332, in run_deep_conv_path
+    x_probe = run_conv_gate_layer(
+        conv_params_list[i], conv_wires_list[i], x_probe, False, probe_key,
+        kernel_size=ks, stride=st,
+        architecture=architecture, logic_family=logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 297, in run_conv_gate_layer
+    out = _run_tree_kernels(
+        params, wires, flat, training, key,
+        architecture, gumb_tau, dirichlet_concentration, logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 139, in _run_tree_kernels
+    return jax.vmap(apply_all_kernels)(flat)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 117, in apply_all_kernels
+    z = jax.vmap(
+    ...<2 lines>...
+        )
+    )(
+        layer_params[0],
+    ...<2 lines>...
+        layer_keys[:, 0, :],
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 118, in <lambda>
+    lambda logits, wire_a, wire_b, layer_key: run_one_kernel(
+                                              ~~~~~~~~~~~~~~^
+        logits, wire_a, wire_b, patch_flat, layer_key,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 108, in run_one_kernel
+    return run_layer(
+        logits,
+    ...<3 lines>...
+        dirichlet_concentration, logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/network.py", line 42, in run_layer
+    return bin_op_s(a, b, gate_weights)
+  File "/home/corp3521/DLGN_Only/dlgn/models/gates.py", line 86, in bin_op_s
+    return jnp.sum(bin_op_all_combinations(a, b) * gate_weights, axis=-1)
+                   ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/models/gates.py", line 72, in bin_op_all_combinations
+    1 - (a + b - 2 * a * b),     # 9  XNOR
+                 ~~~~~~^~~
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/array_methods.py", line 1141, in op
+    return getattr(self.aval, f"_{name}")(self, *args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/array_methods.py", line 604, in deferring_binary_op
+    return binary_op(*args)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/ufunc_api.py", line 183, in __call__
+    return call(*args)
+ValueError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 2147483648 bytes.
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.
+W0415 08:55:34.026400   59251 bfc_allocator.cc:501] Allocator (GPU_0_bfc) ran out of memory trying to allocate 5.00GiB (rounded to 5368709120)requested by op 
+If the cause is memory fragmentation maybe the environment variable 'TF_GPU_ALLOCATOR=cuda_malloc_async' will improve the situation. 
+Current allocation summary follows.
+Current allocation summary follows.
+W0415 08:55:34.198244   59251 bfc_allocator.cc:512] **_____________________****************************************************************_____________
+E0415 08:55:34.204225   59251 pjrt_stream_executor_client.cc:3314] Execution of replica 0 failed: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 5368709120 bytes. [tf-allocator-allocation-error='']
+Dataset: cifar10  classes=10  batch=128  steps=5000  preset=giant_cifar  threshold_bits=5
+Traceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 753, in main
+    run_deep_conv_path(args, train_loader, test_loader, class_count)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 332, in run_deep_conv_path
+    x_probe = run_conv_gate_layer(
+        conv_params_list[i], conv_wires_list[i], x_probe, False, probe_key,
+        kernel_size=ks, stride=st,
+        architecture=architecture, logic_family=logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 297, in run_conv_gate_layer
+    out = _run_tree_kernels(
+        params, wires, flat, training, key,
+        architecture, gumb_tau, dirichlet_concentration, logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 139, in _run_tree_kernels
+    return jax.vmap(apply_all_kernels)(flat)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 117, in apply_all_kernels
+    z = jax.vmap(
+    ...<2 lines>...
+        )
+    )(
+        layer_params[0],
+    ...<2 lines>...
+        layer_keys[:, 0, :],
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 118, in <lambda>
+    lambda logits, wire_a, wire_b, layer_key: run_one_kernel(
+                                              ~~~~~~~~~~~~~~^
+        logits, wire_a, wire_b, patch_flat, layer_key,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/home/corp3521/DLGN_Only/dlgn/models/conv.py", line 108, in run_one_kernel
+    return run_layer(
+        logits,
+    ...<3 lines>...
+        dirichlet_concentration, logic_family,
+    )
+  File "/home/corp3521/DLGN_Only/dlgn/models/network.py", line 42, in run_layer
+    return bin_op_s(a, b, gate_weights)
+  File "/home/corp3521/DLGN_Only/dlgn/models/gates.py", line 86, in bin_op_s
+    return jnp.sum(bin_op_all_combinations(a, b) * gate_weights, axis=-1)
+                   ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/corp3521/DLGN_Only/dlgn/models/gates.py", line 65, in bin_op_all_combinations
+    a - a * b,                   # 2  A AND NOT B
+        ~~^~~
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/array_methods.py", line 1141, in op
+    return getattr(self.aval, f"_{name}")(self, *args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/array_methods.py", line 604, in deferring_binary_op
+    return binary_op(*args)
+  File "/home/corp3521/miniforge3/envs/jax313/lib/python3.13/site-packages/jax/_src/numpy/ufunc_api.py", line 183, in __call__
+    return call(*args)
+ValueError: RESOURCE_EXHAUSTED: Out of memory while trying to allocate 5368709120 bytes.
+--------------------
+For simplicity, JAX has removed its internal frames from the traceback of the following exception. Set JAX_TRACEBACK_FILTERING=off to include these.

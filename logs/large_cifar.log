@@ -1,0 +1,1 @@
+Dataset: cifar10  classes=10  batch=128  steps=5000  preset=large_cifar  threshold_bits=5

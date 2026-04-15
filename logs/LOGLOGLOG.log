@@ -1,0 +1,53 @@
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset small_cifar  | tee logs/small_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset medium_cifar | tee logs/medium_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset base_cifar   | tee logs/base_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset large_cifar  | tee logs/large_cifar.log
+python scripts/test_mnist_layers.py --model conv --dataset cifar10 --preset giant_cifar  | tee logs/giant_cifar.log
+E0415 08:00:40.910401   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:00:40.991049   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:00:41.071616   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+Dataset: cifar10  classes=10  batch=128  steps=5000  preset=small_cifar  threshold_bits=2
+
+[conv] deep conv DLGN (full/softmax) on cifar10
+  input=(32, 32, 6)  threshold_bits=2
+  block 0: ch=32  k=3  d=3  pad=1  s=1
+  block 1: ch=128  k=3  d=3  pad=1  s=1
+  block 2: ch=512  k=3  d=3  pad=1  s=1
+  block 3: ch=1024  k=3  d=3  pad=1  s=1
+  pool=2x2 stride=2
+  flatten=4096  fc=[40960, 20480, 10240]
+  sum_tau=20  class_count=10
+  before: soft_loss=2.3989 hard_loss=2.4013 soft_acc=0.1328 hard_acc=0.1328
+  compiling train step (this may take a while) ...
+E0415 08:07:22.352954   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:07:22.433422   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:07:22.514092   33361 cuda_timer.cc:86] Delay kernel timed out: measured time has sub-optimal accuracy. There may be a missing warmup execution, please investigate in Nsight Systems.
+E0415 08:10:41.064483   33534 slow_operation_alarm.cc:73] 
+********************************
+[Compiling module jit_step for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+E0415 08:11:22.261296   33361 slow_operation_alarm.cc:140] The operation took 2m41.196883707s
+
+********************************
+[Compiling module jit_step for GPU] Very slow compile? If you want to file a bug, run with envvar XLA_FLAGS=--xla_dump_to=/tmp/foo and attach the results.
+********************************
+  compiled in 648.3s  step_0_loss=2.3878
+  step   100/5000  train_loss=2.2369  soft_loss=2.2358 hard_loss=2.4013 soft_acc=0.1719 hard_acc=0.1328  [19s]
+  step   200/5000  train_loss=2.1086  soft_loss=2.0119 hard_loss=2.3971 soft_acc=0.2656 hard_acc=0.1328  [39s]
+  step   300/5000  train_loss=1.8506  soft_loss=1.8704 hard_loss=2.0873 soft_acc=0.3203 hard_acc=0.2812  [59s]
+^CTraceback (most recent call last):
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 753, in main
+    run_deep_conv_path(args, train_loader, test_loader, class_count)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 417, in run_deep_conv_path
+    params, opt_state, key, loss = train_step(
+                                   ~~~~~~~~~~^
+        params, opt_state, batch_images, batch_y, key,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "<string>", line 1, in <lambda>
+KeyboardInterrupt

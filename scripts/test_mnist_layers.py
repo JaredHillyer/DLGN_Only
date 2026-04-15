@@ -402,6 +402,16 @@ def run_deep_conv_path(args, train_loader, test_loader, class_count):
     # --- Train ---
     eval_every = args.eval_every
     t_train = time.time()
+    metrics = before
+
+    if args.train_steps == 1:
+        eval_key = jax.random.PRNGKey(args.seed + 30_001)
+        metrics = deep_conv_evaluate(params, wires, test_images, test_y,
+                                     eval_key, cfg, **conv_kw)
+        print(f'  step {1:>5}/{args.train_steps}  '
+              f'train_loss={float(loss):.4f}  {fmt(metrics)}  '
+              f'[0s]', flush=True)
+
     for step in range(2, args.train_steps + 1):
         batch_images, batch_y = to_image_jax(next(train_iter))
         params, opt_state, key, loss = train_step(

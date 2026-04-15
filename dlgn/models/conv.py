@@ -89,24 +89,52 @@ def _run_tree_kernels(
     n_kernels = len(params)
     depth = len(params[0])
 
-    # one key per kernel × layer
-    all_keys = jax.random.split(key, n_kernels * depth)
+    # Stack kernel trees per layer so JAX can vectorize across kernels instead
+    # of unrolling a Python list comprehension for every output channel.
+    layer_params = [
+        jnp.stack([params[k][layer_i] for k in range(n_kernels)], axis=0)
+        for layer_i in range(depth)
+    ]
+    layer_wires = [
+        (
+            jnp.stack([wires[k][layer_i][0] for k in range(n_kernels)], axis=0),
+            jnp.stack([wires[k][layer_i][1] for k in range(n_kernels)], axis=0),
+        )
+        for layer_i in range(depth)
+    ]
+    layer_keys = jax.random.split(key, n_kernels * depth).reshape(n_kernels, depth, 2)
 
-    def apply_tree(patch_flat, k):
-        z = patch_flat
-        for layer_i in range(depth):
-            layer_key = all_keys[k * depth + layer_i]
-            z = run_layer(
-                params[k][layer_i],
-                wires[k][layer_i],
-                z, training, layer_key,
-                architecture, gumb_tau,
-                dirichlet_concentration, logic_family,
-            )
-        return z.squeeze(-1)
+    def run_one_kernel(logits, wire_a, wire_b, x, layer_key):
+        return run_layer(
+            logits,
+            (wire_a, wire_b),
+            x, training, layer_key,
+            architecture, gumb_tau,
+            dirichlet_concentration, logic_family,
+        )
 
     def apply_all_kernels(patch_flat):
-        return jnp.array([apply_tree(patch_flat, k) for k in range(n_kernels)])
+        z = jax.vmap(
+            lambda logits, wire_a, wire_b, layer_key: run_one_kernel(
+                logits, wire_a, wire_b, patch_flat, layer_key,
+            )
+        )(
+            layer_params[0],
+            layer_wires[0][0],
+            layer_wires[0][1],
+            layer_keys[:, 0, :],
+        )
+
+        for layer_i in range(1, depth):
+            z = jax.vmap(run_one_kernel)(
+                layer_params[layer_i],
+                layer_wires[layer_i][0],
+                layer_wires[layer_i][1],
+                z,
+                layer_keys[:, layer_i, :],
+            )
+
+        return z.squeeze(-1)
 
     return jax.vmap(apply_all_kernels)(flat)
 

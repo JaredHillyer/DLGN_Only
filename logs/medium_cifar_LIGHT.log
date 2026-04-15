@@ -1,0 +1,13 @@
+Dataset: cifar10  classes=10  batch=128  steps=5000  preset=medium_cifar  threshold_bits=2
+
+[conv] deep conv DLGN (light/light_st) on cifar10
+  input=(32, 32, 6)  threshold_bits=2
+  block 0: ch=256  k=3  d=3  pad=1  s=1
+  block 1: ch=1024  k=3  d=3  pad=1  s=1
+  block 2: ch=4096  k=3  d=3  pad=1  s=1
+  block 3: ch=8192  k=3  d=3  pad=1  s=1
+  pool=2x2 stride=2
+  flatten=32768  fc=[327680, 163840, 81920]
+  sum_tau=40  class_count=10
+  before: soft_loss=2.4409 hard_loss=2.4409 soft_acc=0.0859 hard_acc=0.0859
+  compiling train step (this may take a while) ...

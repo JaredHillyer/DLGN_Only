@@ -36,13 +36,13 @@ E0415 08:11:22.261296   33361 slow_operation_alarm.cc:140] The operation took 2m
   step   200/5000  train_loss=2.1086  soft_loss=2.0119 hard_loss=2.3971 soft_acc=0.2656 hard_acc=0.1328  [39s]
   step   300/5000  train_loss=1.8506  soft_loss=1.8704 hard_loss=2.0873 soft_acc=0.3203 hard_acc=0.2812  [59s]
 ^CTraceback (most recent call last):
-  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
+  File "/home/user/DLGN_Only/scripts/test_mnist_layers.py", line 760, in <module>
     raise SystemExit(main())
                      ~~~~^^
-  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 753, in main
+  File "/home/user/DLGN_Only/scripts/test_mnist_layers.py", line 753, in main
     run_deep_conv_path(args, train_loader, test_loader, class_count)
     ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/corp3521/DLGN_Only/scripts/test_mnist_layers.py", line 417, in run_deep_conv_path
+  File "/home/user/DLGN_Only/scripts/test_mnist_layers.py", line 417, in run_deep_conv_path
     params, opt_state, key, loss = train_step(
                                    ~~~~~~~~~~^
         params, opt_state, batch_images, batch_y, key,

@@ -51,12 +51,13 @@ def load_cifar_threshold(
     seed: int,
     data_root: str = './data-cifar',
     num_workers: int = 0,
+    n_thresholds: int | None = None,
 ):
     """Load thresholded CIFAR-10 for DLGN.
 
-    Supported dataset names:
-      - 'cifar-10-3-thresholds'   (3 thresholds per channel)
-      - 'cifar-10-31-thresholds'  (31 thresholds per channel)
+    Args:
+        n_thresholds: If provided, use this threshold count directly.
+            Otherwise fall back to the dataset-name lookup.
     """
     if dataset == 'cifar-10-real-input':
         raise ValueError(
@@ -64,17 +65,17 @@ def load_cifar_threshold(
             'DLGN expects thresholded/binary-style inputs.'
         )
 
-    threshold_map = {
-        'cifar-10-3-thresholds': 3,
-        'cifar-10-31-thresholds': 31,
-    }
-    if dataset not in threshold_map:
-        raise ValueError(
-            f'Unknown CIFAR dataset {dataset!r}. '
-            f'Supported: {sorted(threshold_map)}'
-        )
-
-    n_thresholds = threshold_map[dataset]
+    if n_thresholds is None:
+        threshold_map = {
+            'cifar-10-3-thresholds': 3,
+            'cifar-10-31-thresholds': 31,
+        }
+        if dataset not in threshold_map:
+            raise ValueError(
+                f'Unknown CIFAR dataset {dataset!r} and n_thresholds not provided. '
+                f'Supported names: {sorted(threshold_map)}'
+            )
+        n_thresholds = threshold_map[dataset]
     transform_fn = lambda x: np.concatenate(
         [(x > (i + 1) / (n_thresholds + 1)).astype(np.float32) for i in range(n_thresholds)],
         axis=0,

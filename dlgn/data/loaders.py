@@ -217,7 +217,7 @@ def load_dataset(config: dict):
                                               valid_set_size, seed, num_workers)
 
     # ── CIFAR threshold datasets ─────────────────────────────────────────────
-    if dataset.startswith('cifar-10'):
+    if dataset == 'cifar10' or dataset.startswith('cifar-10'):
         from dlgn.data.cifar_threshold import load_cifar_threshold
         return load_cifar_threshold(
             dataset=dataset,
@@ -226,6 +226,7 @@ def load_dataset(config: dict):
             seed=seed,
             data_root=data_roots.get('cifar', './data-cifar'),
             num_workers=num_workers,
+            n_thresholds=config.get('threshold_bits'),
         )
 
     # Should not reach here since we checked SUPPORTED_DATASETS above.

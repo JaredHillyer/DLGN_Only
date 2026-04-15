@@ -19,6 +19,7 @@ SUPPORTED_DATASETS = frozenset([
     'mnist20x20',
     'mnist_bin',
     'mnist20x20_bin',
+    'cifar10',
     'cifar-10-3-thresholds',
     'cifar-10-31-thresholds',
 ])
@@ -65,6 +66,7 @@ def num_classes_of_dataset(dataset: str) -> int:
         'mnist20x20': 10,
         'mnist_bin': 2,
         'mnist20x20_bin': 2,
+        'cifar10': 10,
         'cifar-10-3-thresholds': 10,
         'cifar-10-31-thresholds': 10,
     }

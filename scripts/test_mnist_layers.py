@@ -89,8 +89,8 @@ def to_image_jax(batch):
     x = x.detach().cpu().numpy() if hasattr(x, 'detach') else np.asarray(x)
     y = y.detach().cpu().numpy() if hasattr(y, 'detach') else np.asarray(y)
 
-    if x.ndim == 4 and x.shape[1] in (1, 3):
-        x = np.transpose(x, (0, 2, 3, 1))  # NCHW → NHWC
+    if x.ndim == 4:
+        x = np.transpose(x, (0, 2, 3, 1))  # NCHW → NHWC (any channel count)
     elif x.ndim == 3:
         x = x[..., None]
 
@@ -358,8 +358,11 @@ def run_deep_conv_path(args, train_loader, test_loader, class_count):
     )
 
     # --- Print architecture summary ---
-    print(f'\n[conv] deep conv DLGN ({logic_family}/{architecture}) on MNIST')
-    print(f'  input={tuple(sample_images.shape[1:])}')
+    dataset_label = getattr(args, 'dataset', 'mnist')
+    tb = getattr(args, 'threshold_bits', None)
+    print(f'\n[conv] deep conv DLGN ({logic_family}/{architecture}) on {dataset_label}')
+    print(f'  input={tuple(sample_images.shape[1:])}  '
+          f'threshold_bits={tb if tb is not None else "N/A"}')
     for i in range(n_blocks):
         print(f'  block {i}: ch={block_channels[i]}  k={block_kernels[i]}  '
               f'd={block_depths[i]}  pad={block_paddings[i]}  s={block_strides[i]}')
@@ -461,6 +464,7 @@ PRESETS = {
         'logic_family': 'full',
         'architecture': 'softmax',
         'eval_every': 100,
+        'threshold_bits': 1,
     },
 
     'medium': {
@@ -481,6 +485,7 @@ PRESETS = {
         'logic_family': 'full',
         'architecture': 'softmax',
         'eval_every': 100,
+        'threshold_bits': 1,
     },
 
     'large': {
@@ -501,11 +506,13 @@ PRESETS = {
         'logic_family': 'full',
         'architecture': 'softmax',
         'eval_every': 100,
+        'threshold_bits': 1,
     },
 
 ##############################################################
-#NO FC DOUBLING
+#NO FC DOUBLING for base and large
     'small_cifar': {
+        'dataset': 'cifar10',
         'batch_size': 128,
         'train_steps': 5000,
         'learning_rate': 0.02,
@@ -519,7 +526,7 @@ PRESETS = {
         'conv_block_strides': [1, 1, 1, 1],
         'pool_size': 2,
         'pool_stride': 2,
-        'fc_sizes': [40960, 20480, 10240, 5120],
+        'fc_sizes': [40960, 20480, 10240],
         'logic_family': 'full',
         'architecture': 'softmax',
         'eval_every': 100,
@@ -527,6 +534,7 @@ PRESETS = {
     },
 
     'medium_cifar': {
+        'dataset': 'cifar10',
         'batch_size': 128,
         'train_steps': 5000,
         'learning_rate': 0.02,
@@ -540,7 +548,7 @@ PRESETS = {
         'conv_block_strides': [1, 1, 1, 1],
         'pool_size': 2,
         'pool_stride': 2,
-        'fc_sizes': [327680, 163840, 81920, 40956],
+        'fc_sizes': [327680, 163840, 81920],
         'logic_family': 'full',
         'architecture': 'softmax',
         'eval_every': 100,
@@ -548,20 +556,21 @@ PRESETS = {
     },
 
     'base_cifar': {
+        'dataset': 'cifar10',
         'batch_size': 128,
         'train_steps': 5000,
         'learning_rate': 0.02,
         'weight_decay': 0.002,
         'clip_value': 1.0,
         'sum_tau': 280,
-        'conv_block_channels': [512, 2048, 8192, 16384], 
+        'conv_block_channels': [512, 2048, 8192, 16384],
         'conv_block_kernel_sizes': [3, 3, 3, 3],
         'conv_block_depths': [3, 3, 3, 3],
         'conv_block_paddings': [1, 1, 1, 1],
         'conv_block_strides': [1, 1, 1, 1],
         'pool_size': 2,
         'pool_stride': 2,
-        'fc_sizes': [655360, 327680, 163840, 81920],
+        'fc_sizes': [1310720, 655360, 327680], #Div 2 = [[655360, 327680, 163840]
         'logic_family': 'full',
         'architecture': 'softmax',
         'eval_every': 100,
@@ -569,20 +578,21 @@ PRESETS = {
     },
 
     'large_cifar': {
+        'dataset': 'cifar10',
         'batch_size': 128,
         'train_steps': 5000,
         'learning_rate': 0.02,
         'weight_decay': 0.002,
         'clip_value': 1.0,
         'sum_tau': 340,
-        'conv_block_channels': [1024, 4096, 16384, 32768], 
+        'conv_block_channels': [1024, 4096, 16384, 32768],
         'conv_block_kernel_sizes': [3, 3, 3, 3],
         'conv_block_depths': [3, 3, 3, 3],
         'conv_block_paddings': [1, 1, 1, 1],
         'conv_block_strides': [1, 1, 1, 1],
         'pool_size': 2,
         'pool_stride': 2,
-        'fc_sizes': [1310720, 655360, 327690, 163840],
+        'fc_sizes': [2621440, 1310720, 655360], #Div 2 = [1310720, 655360, 327690]
         'logic_family': 'full',
         'architecture': 'softmax',
         'eval_every': 100,
@@ -590,20 +600,21 @@ PRESETS = {
     },
 
     'giant_cifar': {
+        'dataset': 'cifar10',
         'batch_size': 128,
         'train_steps': 5000,
         'learning_rate': 0.02,
         'weight_decay': 0.001,
         'clip_value': 1.0,
         'sum_tau': 450,
-        'conv_block_channels': [2560, 10240, 40960, 81920], 
+        'conv_block_channels': [2560, 10240, 40960, 81920],
         'conv_block_kernel_sizes': [3, 3, 3, 3],
         'conv_block_depths': [3, 3, 3, 3],
         'conv_block_paddings': [1, 1, 1, 1],
         'conv_block_strides': [1, 1, 1, 1],
         'pool_size': 2,
         'pool_stride': 2,
-        'fc_sizes': [3276800, 1638400, 819200, 409600],
+        'fc_sizes': [3276800, 1638400, 819200],
         'logic_family': 'full',
         'architecture': 'softmax',
         'eval_every': 100,
@@ -617,7 +628,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p.add_argument('--preset', default='smoke', choices=PRESETS.keys())
     p.add_argument('--dataset', default='mnist',
-                   choices=['mnist', 'mnist20x20', 'mnist_bin', 'mnist20x20_bin'])
+                   choices=['mnist', 'mnist20x20', 'mnist_bin', 'mnist20x20_bin',
+                            'cifar10', 'cifar-10-3-thresholds', 'cifar-10-31-thresholds'])
     p.add_argument('--model', default='both', choices=['regular', 'conv', 'both'])
     p.add_argument('--storage-root', default=str(ROOT / 'dataset_storage'),
                    dest='storage_root')
@@ -661,6 +673,10 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument('--gumb-tau', type=float, default=1.0, dest='gumb_tau')
     g.add_argument('--dirichlet-concentration', type=float, default=1.0,
                    dest='dirichlet_concentration')
+    g.add_argument('--threshold-bits', type=int, default=None,
+                   dest='threshold_bits',
+                   help='Number of binary thresholds per input channel '
+                        '(CIFAR: 3ch × N = 3N input channels)')
     return p
 
 
@@ -701,6 +717,8 @@ def main(argv=None) -> int:
             'block': str(storage_root / 'block'),
         },
     }
+    if getattr(args, 'threshold_bits', None) is not None:
+        data_config['threshold_bits'] = args.threshold_bits
 
     train_loader, _, test_loader = load_dataset(data_config)
     class_count = num_classes_of_dataset(args.dataset)
@@ -712,9 +730,11 @@ def main(argv=None) -> int:
                   f'divisible by class_count ({class_count})')
             return 1
 
+    tb = getattr(args, 'threshold_bits', None)
     print(f'Dataset: {args.dataset}  classes={class_count}  '
           f'batch={args.batch_size}  steps={args.train_steps}  '
-          f'preset={args.preset}')
+          f'preset={args.preset}'
+          + (f'  threshold_bits={tb}' if tb is not None else ''))
 
     if args.model in ('regular', 'both'):
         run_regular_path(args, train_loader, test_loader, class_count)

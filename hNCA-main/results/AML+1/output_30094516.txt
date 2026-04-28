@@ -1,0 +1,40 @@
+python3 src/train.py --output e50l24d1_128_128_32_16maxmultiscale_Focal_64_AML+1 --train_set AML --predict maxmultiscale --criterion Focal --resize 64 --fold 1 --learning_rate 2e-4 --n_epochs 50 --dropout 0.1 --channel_n_1 128 --channel_n_2 128 --steps_1 32 --steps_2 16
+cuda
+AML+1_AML accuracy: 0.9493
+F1 Score: 0.9456
+
+Classification Report:
+               precision    recall  f1-score   support
+
+           0       0.75      0.56      0.64        16
+           1       0.98      0.93      0.95        85
+           2       0.85      0.73      0.79        15
+           3       0.92      0.95      0.94       654
+           4       0.88      0.50      0.64        14
+           5       0.67      0.25      0.36         8
+           6       0.00      0.00      0.00         3
+           7       0.75      0.14      0.23        22
+           8       0.98      0.99      0.99      1697
+           9       0.91      0.87      0.89       363
+          10       0.92      0.96      0.94       787
+          11       0.00      0.00      0.00         3
+          12       0.00      0.00      0.00         3
+
+    accuracy                           0.95      3670
+   macro avg       0.66      0.53      0.57      3670
+weighted avg       0.95      0.95      0.95      3670
+
+Confusion Matrix:
+ [[   9    2    0    1    0    0    0    0    3    1    0    0    0]
+ [   1   79    0    0    0    0    0    0    4    0    1    0    0]
+ [   0    0   11    0    0    0    0    0    0    0    4    0    0]
+ [   0    0    0  622    1    0    0    0    0    9   22    0    0]
+ [   0    0    0    6    7    0    0    0    0    1    0    0    0]
+ [   0    0    0    0    0    2    0    0    0    4    2    0    0]
+ [   0    0    0    0    0    1    0    0    0    1    1    0    0]
+ [   0    0    0    0    0    0    0    3   14    3    2    0    0]
+ [   1    0    0    3    0    0    0    0 1676    7    9    0    1]
+ [   0    0    0   26    0    0    0    1    2  316   18    0    0]
+ [   1    0    2   14    0    0    0    0    4    7  759    0    0]
+ [   0    0    0    1    0    0    0    0    0    0    2    0    0]
+ [   0    0    0    1    0    0    0    0    0    0    2    0    0]]

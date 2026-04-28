@@ -1,0 +1,12 @@
+python3.10
+torch12.1
+umap-learn
+scikit-learn
+ptflops
+matplotlib
+tensorboard
+pytorch-model-summary
+filelock
+torchdiffeq
+psutil
+memory_profiler

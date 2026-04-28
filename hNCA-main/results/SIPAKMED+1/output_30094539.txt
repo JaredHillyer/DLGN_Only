@@ -1,0 +1,24 @@
+python3 src/train.py --output e50l24d1_128_128_32_16maxmultiscale_Focal_64_SIPAKMED+1 --train_set SIPAKMED --predict maxmultiscale --criterion Focal --resize 64 --fold 1 --learning_rate 2e-4 --n_epochs 50 --dropout 0.1 --channel_n_1 128 --channel_n_2 128 --steps_1 32 --steps_2 16
+cuda
+SIPAKMED+1_SIPAKMED accuracy: 0.9519
+F1 Score: 0.9518
+
+Classification Report:
+               precision    recall  f1-score   support
+
+           0       0.92      0.93      0.93       165
+           1       0.96      1.00      0.98       158
+           2       0.94      0.95      0.94       162
+           3       0.97      0.92      0.94       159
+           4       0.98      0.96      0.97       166
+
+    accuracy                           0.95       810
+   macro avg       0.95      0.95      0.95       810
+weighted avg       0.95      0.95      0.95       810
+
+Confusion Matrix:
+ [[154   0   7   4   0]
+ [  0 158   0   0   0]
+ [  6   0 154   0   2]
+ [  5   3   3 146   2]
+ [  2   4   0   1 159]]

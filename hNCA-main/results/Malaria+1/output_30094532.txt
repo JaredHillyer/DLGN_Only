@@ -1,0 +1,18 @@
+python3 src/train.py --output e50l24d1_128_128_32_16maxmultiscale_Focal_64_Malaria+1 --train_set Malaria --predict maxmultiscale --criterion Focal --resize 64 --fold 1 --learning_rate 2e-4 --n_epochs 50 --dropout 0.1 --channel_n_1 128 --channel_n_2 128 --steps_1 32 --steps_2 16
+cuda
+Malaria+1_Malaria accuracy: 0.9637
+F1 Score: 0.9637
+
+Classification Report:
+               precision    recall  f1-score   support
+
+           0       0.95      0.98      0.96      2756
+           1       0.98      0.95      0.96      2756
+
+    accuracy                           0.96      5512
+   macro avg       0.96      0.96      0.96      5512
+weighted avg       0.96      0.96      0.96      5512
+
+Confusion Matrix:
+ [[2694   62]
+ [ 138 2618]]

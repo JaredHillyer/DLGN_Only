@@ -8,3 +8,4 @@ __pycache__/
 dlgn.egg-info/
 .ipynb_checkpoints/
 dataset_storage/
+data-mnist/

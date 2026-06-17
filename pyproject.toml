@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dlgn"
+version = "0.1.0"
+description = "Differentiable Logic Gate Networks & Light Differentiable Logic Gate Networks. Application of Thesis"
+requires-python = ">=3.10"
+dependencies = [
+    "jax",
+    "jaxlib",
+    "optax",
+    "flax",
+    "numpy",
+    "torch",
+    "torchvision",
+    "scikit-learn",
+    "Pillow",
+    "matplotlib",
+    "pytest",
+]
+
+[project.scripts]
+train-dlgn = "dlgn.cli.train:main"
+resume-dlgn = "dlgn.cli.resume:main"
+inspect-checkpoint = "dlgn.cli.inspect_checkpoint:main"
+train-cdlgn = "scripts.test_layers:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dlgn*", "scripts*"]
